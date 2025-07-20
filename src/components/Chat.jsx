@@ -417,6 +417,7 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
   // Check if app is installable
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
+      console.log('beforeinstallprompt event fired')
       e.preventDefault()
       setDeferredPrompt(e)
       setIsInstallable(true)
@@ -425,9 +426,20 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
     
     // Check if app is already installed
-    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+    const isStandalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches
+    console.log('Is app in standalone mode:', isStandalone)
+    
+    if (isStandalone) {
       setIsInstallable(false)
     }
+    
+    // Debug info
+    console.log('PWA Debug Info:', {
+      userAgent: navigator.userAgent,
+      isStandalone,
+      hasServiceWorker: 'serviceWorker' in navigator,
+      currentURL: window.location.href
+    })
     
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
@@ -632,7 +644,7 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
                     ? "Install ClaudeChat on your device for a native app experience"
                     : window.matchMedia && window.matchMedia('(display-mode: standalone)').matches
                       ? "App is already installed"
-                      : "Install option will appear when available"
+                      : "Install option will appear when available. Check browser console for debug info."
                   }
                 </Text>
               </div>
