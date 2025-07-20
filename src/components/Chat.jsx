@@ -403,7 +403,7 @@ export default function Chat({ user, onLogout }) {
   )
 }
 
-// Settings Component - allows users to update their profile
+// Settings Component - allows users to update their profile and install app
 // Uses a mix of Material UI and LiftKit components
 function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
   // Local state for settings form
@@ -411,6 +411,42 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [deferredPrompt, setDeferredPrompt] = useState(null)
+  const [isInstallable, setIsInstallable] = useState(false)
+  
+  // Check if app is installable
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+      setIsInstallable(true)
+    }
+    
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    
+    // Check if app is already installed
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstallable(false)
+    }
+    
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    }
+  }, [])
+  
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return
+    
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    
+    if (outcome === 'accepted') {
+      setIsInstallable(false)
+      setSuccess('App installed successfully!')
+    }
+    
+    setDeferredPrompt(null)
+  }
   
 
   const handleUpdateUsername = async (e) => {
@@ -577,6 +613,41 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
               onClick={handleUpdateUsername}
             />
           </form>
+
+          {/* Divider using LiftKit styling */}
+          <div style={{height: '1px', backgroundColor: 'var(--lk-outline)', margin: '1.5rem 0'}} />
+
+          {/* Install App Section */}
+          <Text fontClass="title1" marginBottom="md">
+            Progressive Web App
+          </Text>
+          <Card material="surface-container" padding="md" borderRadius="lg" marginBottom="lg">
+            <Row alignItems="center" justifyContent="space-between">
+              <div style={{flex: 1}}>
+                <Text fontClass="label" fontWeight="semibold" marginBottom="xs">
+                  Install as App
+                </Text>
+                <Text fontClass="body" color="on-surface-variant" marginBottom="sm">
+                  {isInstallable 
+                    ? "Install ClaudeChat on your device for a native app experience"
+                    : window.matchMedia && window.matchMedia('(display-mode: standalone)').matches
+                      ? "App is already installed"
+                      : "Install option will appear when available"
+                  }
+                </Text>
+              </div>
+              {isInstallable && (
+                <Button
+                  variant="fill"
+                  color="primary"
+                  label="Install App"
+                  onClick={handleInstallApp}
+                  size="md"
+                  style={{minWidth: '120px'}}
+                />
+              )}
+            </Row>
+          </Card>
 
           {/* Divider using LiftKit styling */}
           <div style={{height: '1px', backgroundColor: 'var(--lk-outline)', margin: '1.5rem 0'}} />
