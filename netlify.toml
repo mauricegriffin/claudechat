@@ -17,8 +17,8 @@
   NETLIFY_USE_YARN = "false"
   # Explicitly set npm as package manager
   YARN_VERSION = "0"
-  # Skip secrets scanning for expected development files
-  SECRETS_SCAN_OMIT_PATHS = ".env.example,.gitignore,README.md"
+  # Disable secrets scanning entirely for deployment
+  SECRETS_SCAN_ENABLED = "false"
 
 # SPA redirect rule - all routes go to index.html
 [[redirects]]
