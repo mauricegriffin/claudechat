@@ -377,15 +377,16 @@ export default function Chat({ user, onLogout }) {
                 />
               </div>
               
-              {/* Send button using LiftKit Button - icon only for mobile */}
-              <Button
+              {/* Send button using LiftKit IconButton for icon-only design */}
+              <IconButton
                 type="submit"
                 variant="fill"
                 color="primary"
-                startIcon={loading ? "loader-2" : "send"}
+                icon={loading ? "loader-2" : "send"}
                 disabled={loading || !newMessage.trim()}
                 size="lg"
-                style={{minWidth: '48px', height: '48px', borderRadius: '9999px'}}
+                style={{minWidth: '56px', height: '56px', borderRadius: '28px'}}
+                aria-label="Send message"
               />
             </Row>
           </form>
