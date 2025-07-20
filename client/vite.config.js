@@ -11,4 +11,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    hmr: {
+      overlay: true
+    },
+    watch: {
+      usePolling: true,
+      interval: 100
+    }
+  }
 })

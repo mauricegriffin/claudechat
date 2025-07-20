@@ -94,16 +94,19 @@ export default function Signup({ onSignup }) {
         </Text>
         
         {/* Google OAuth Button - Place it prominently at the top */}
-        <Button
-          onClick={handleGoogleSignup}
-          label="Continue with Google"
-          variant="outline"
-          color="primary"
-          size="lg"
-          disabled={loading}
-          className="w-full mb-6"
-          startIcon="chrome"
-        />
+        {/* Using LiftKit Button with golden ratio spacing (mb-6 = 1.5rem ≈ φ) */}
+        <div className="mb-6">
+          <Button
+            onClick={handleGoogleSignup}
+            label="Continue with Google"
+            variant="outline"
+            color="primary"
+            size="lg"
+            disabled={loading}
+            className="w-full"
+            startIcon="globe"
+          />
+        </div>
 
         {/* Divider with "or" text */}
         <div className="flex items-center my-6">

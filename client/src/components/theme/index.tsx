@@ -147,54 +147,54 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
       onInfoContainer: "#001550",
     },
     dark: {
-      primary: "#004ee7",
-      onPrimary: "#ffffff",
-      primaryContainer: "#dce1ff",
-      onPrimaryContainer: "#001550",
-      secondary: "#595d72",
-      onSecondary: "#ffffff",
-      secondaryContainer: "#dee1f9",
-      onSecondaryContainer: "#161b2c",
-      tertiary: "#75546f",
-      onTertiary: "#ffffff",
-      tertiaryContainer: "#ffd7f5",
-      onTertiaryContainer: "#2c122a",
-      error: "#ba1a1a",
-      onError: "#ffffff",
-      errorContainer: "#ffdad6",
-      onErrorContainer: "#410002",
-      background: "#fefbff",
-      onBackground: "#1b1b1f",
-      surface: "#fbf8fd",
-      onSurface: "#1b1b1f",
-      surfaceVariant: "#e2e1ec",
-      onSurfaceVariant: "#45464f",
-      outline: "#767680",
-      outlineVariant: "#c6c5d0",
+      primary: "#bb86fc",
+      onPrimary: "#000000",
+      primaryContainer: "#3700b3",
+      onPrimaryContainer: "#e8d5ff",
+      secondary: "#03dac6",
+      onSecondary: "#000000",
+      secondaryContainer: "#005b4f",
+      onSecondaryContainer: "#a7f3d0",
+      tertiary: "#cf6679",
+      onTertiary: "#000000",
+      tertiaryContainer: "#8c1d2d",
+      onTertiaryContainer: "#fecdd3",
+      error: "#ff6b6b",
+      onError: "#000000",
+      errorContainer: "#b71c1c",
+      onErrorContainer: "#ffcdd2",
+      background: "#0a0a0a",
+      onBackground: "#f5f5f5",
+      surface: "#121212",
+      onSurface: "#ffffff",
+      surfaceVariant: "#2e2e2e",
+      onSurfaceVariant: "#e0e0e0",
+      outline: "#8e8e93",
+      outlineVariant: "#48484a",
       shadow: "#000000",
       scrim: "#000000",
-      inverseSurface: "#303034",
-      inverseOnSurface: "#f2f0f4",
-      inversePrimary: "#b6c4ff",
-      surfaceDim: "#dbd9de",
-      surfaceBright: "#fbf8fd",
-      surfaceContainerLowest: "#ffffff",
-      surfaceContainerLow: "#f5f3f7",
-      surfaceContainer: "#efedf1",
-      surfaceContainerHigh: "#eae7ec",
-      surfaceContainerHighest: "#e4e1e6",
-      warning: "#e3aa00",
-      onWarning: "#281b00",
-      warningContainer: "#ffdfa0",
-      onWarningContainer: "#261a00",
-      success: "#41ca82",
-      onSuccess: "#002311",
-      successContainer: "#77fbae",
-      onSuccessContainer: "#002110",
-      info: "#9bb0ff",
-      onInfo: "#001754",
-      infoContainer: "#dce1ff",
-      onInfoContainer: "#001550",
+      inverseSurface: "#f5f5f5",
+      inverseOnSurface: "#1c1c1e",
+      inversePrimary: "#6200ea",
+      surfaceDim: "#0a0a0a",
+      surfaceBright: "#2c2c2e",
+      surfaceContainerLowest: "#000000",
+      surfaceContainerLow: "#1c1c1e",
+      surfaceContainer: "#2c2c2e",
+      surfaceContainerHigh: "#3a3a3c",
+      surfaceContainerHighest: "#48484a",
+      warning: "#ffd60a",
+      onWarning: "#000000",
+      warningContainer: "#d2691e",
+      onWarningContainer: "#fff3cd",
+      success: "#30d158",
+      onSuccess: "#000000",
+      successContainer: "#1b5e20",
+      onSuccessContainer: "#c8e6c9",
+      info: "#007aff",
+      onInfo: "#ffffff",
+      infoContainer: "#1565c0",
+      onInfoContainer: "#e3f2fd",
     },
   });
 
@@ -203,7 +203,7 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
    *
    */
 
-const [colorMode, setColorMode] = useState<"light" | "dark">("light");
+const [colorMode, setColorMode] = useState<"light" | "dark">("dark");
   
   const [palette, setPalette] = useState<PaletteState>({
   "primary": "#035eff",
@@ -228,20 +228,26 @@ const [colorMode, setColorMode] = useState<"light" | "dark">("light");
   // update the root css variables with the theme values
   useEffect(() => {
     const root = document.documentElement;
-    // console.log(root);
+    
+    // Set the current theme colors based on colorMode
+    const currentTheme = colorMode === "dark" ? theme.dark : theme.light;
+    
+    Object.keys(currentTheme).forEach((key) => {
+      // Convert camelCase to kebab-case for CSS variables
+      const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+      root.style.setProperty(`--lk-color-${cssKey}`, currentTheme[key]);
+    });
+    
+    // Also set the light and dark theme variables for reference
     Object.keys(theme.light).forEach((key) => {
-      root.style.setProperty(`--light__${key.toLowerCase()}_lkv`, theme.light[key]);
+      const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+      root.style.setProperty(`--lk-light-${cssKey}`, theme.light[key]);
     });
-
+    
     Object.keys(theme.dark).forEach((key) => {
-      root.style.setProperty(`--dark__${key.toLowerCase()}_lkv`, theme.dark[key]);
+      const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+      root.style.setProperty(`--lk-dark-${cssKey}`, theme.dark[key]);
     });
-
-    if (colorMode === "dark") {
-      Object.keys(theme.dark).forEach((key) => {
-        root.style.setProperty(`--light__${key.toLowerCase()}_lkv`, theme.dark[key]);
-      });
-    }
   }, [theme, colorMode]);
 
   //run the initial theme generation on first load

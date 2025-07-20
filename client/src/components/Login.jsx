@@ -77,7 +77,7 @@ export default function Login({ onLogin }) {
   return (
     // Container provides responsive max-width and centering
     // LiftKit utility classes work similar to Tailwind but use golden ratio scale
-    <Container className="flex items-center justify-center min-h-screen p-4">
+    <Container className="flex items-center justify-center min-h-screen p-4 bg-surface">
       {/* Card creates a Material Design elevated surface */}
       {/* 'material' prop sets the surface type following Material 3 guidelines */}
       <Card 
@@ -93,19 +93,22 @@ export default function Login({ onLogin }) {
           Sign in to your account
         </Text>
         
+        
         {/* Google OAuth Button - Place it prominently at the top */}
         {/* OAuth buttons typically appear first as they're often preferred */}
-        <Button
-          onClick={handleGoogleLogin}
-          label="Continue with Google"
-          variant="outline"
-          color="primary"
-          size="lg"
-          disabled={loading}
-          className="w-full mb-6"
-          // Google icon - you can use any icon from Lucide React
-          startIcon="chrome"
-        />
+        {/* Using LiftKit Button with golden ratio spacing (mb-6 = 1.5rem ≈ φ) */}
+        <div className="mb-6">
+          <Button
+            onClick={handleGoogleLogin}
+            label="Continue with Google"
+            variant="outline"
+            color="primary"
+            size="lg"
+            disabled={loading}
+            className="w-full"
+            startIcon="globe"
+          />
+        </div>
 
         {/* Divider with "or" text */}
         <div className="flex items-center my-6">

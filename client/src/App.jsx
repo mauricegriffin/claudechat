@@ -10,7 +10,6 @@ import Button from '@/components/button'
 import Text from '@/components/text'
 // Import LiftKit Theme components for color customization
 import ThemeProvider from '@/components/theme'
-import ThemeController from '@/components/theme-controller'
 
 function App() {
   // User authentication state
@@ -59,13 +58,15 @@ function App() {
   // LiftKit provides utility classes for common layout patterns
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        {/* Text component with typography scale */}
-        {/* color prop uses Material 3 color roles */}
-        <Text fontClass="body" color="on-surface-variant">
-          Loading...
-        </Text>
-      </div>
+      <ThemeProvider>
+        <div className="flex items-center justify-center min-h-screen bg-surface">
+          {/* Text component with typography scale */}
+          {/* color prop uses Material 3 color roles */}
+          <Text fontClass="body" color="on-surface-variant">
+            Loading...
+          </Text>
+        </div>
+      </ThemeProvider>
     )
   }
 
@@ -74,8 +75,6 @@ function App() {
     return (
       <ThemeProvider>
         <Chat user={user} onLogout={handleLogout} />
-        {/* Global Theme Controller - provides floating palette button */}
-        <ThemeController />
       </ThemeProvider>
     )
   }
@@ -83,7 +82,7 @@ function App() {
   // Authentication views - login or signup
   return (
     <ThemeProvider>
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-surface">
         {authView === 'login' ? (
           <div>
             {/* Login component already uses LiftKit */}
@@ -91,7 +90,7 @@ function App() {
             
             {/* Switch to signup link */}
             {/* LiftKit utility classes for spacing and alignment */}
-            <div className="text-center mt-4">
+            <div className="text-center mt-4 pb-8">
               {/* Button with text variant for link-like appearance */}
               {/* LiftKit buttons support three variants: fill, outline, text */}
               <Button
@@ -110,7 +109,7 @@ function App() {
             <Signup onSignup={handleSignup} />
             
             {/* Switch to login link */}
-            <div className="text-center mt-4">
+            <div className="text-center mt-4 pb-8">
               <Button
                 onClick={() => setAuthView('login')}
                 variant="text"
@@ -122,8 +121,6 @@ function App() {
           </div>
         )}
       </div>
-      {/* Global Theme Controller - provides floating palette button */}
-      <ThemeController />
     </ThemeProvider>
   )
 }
