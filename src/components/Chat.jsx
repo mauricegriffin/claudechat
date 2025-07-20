@@ -76,7 +76,10 @@ export default function Chat({ user, onLogout }) {
           fetchNewMessage(payload.new.id)
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('Realtime subscription status:',
+      status)
+      })
 
     return () => {
       supabase.removeChannel(channel)
@@ -189,19 +192,16 @@ export default function Chat({ user, onLogout }) {
         <Row padding="sm" alignItems="center" justifyContent="space-between">
           {/* Hamburger menu button */}
           <IconButton
-            icon="hamburger"
+            icon="menu"
             onClick={() => setShowUserMenu(!showUserMenu)}
-            color="primary"
-            variant="fill"
+            variant="text"
             size="md"
             aria-label="Open navigation menu"
             className="hamburger-menu-button"
             style={{
-              backgroundColor: 'white',
-              color: 'var(--lk-primary)',
-              border: '2px solid var(--lk-primary)',
-              minWidth: '40px',
-              minHeight: '40px'
+              color: 'white',
+              backgroundColor: 'transparent',
+              border: 'none'
             }}
           />
           
