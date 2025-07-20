@@ -20,11 +20,13 @@
   # Disable secrets scanning entirely for deployment
   SECRETS_SCAN_ENABLED = "false"
 
-# SPA redirect rule - all routes go to index.html
+# SPA redirect rule - only redirect non-file requests to index.html
+# Static files (js, css, json, png, svg, etc.) should be served directly
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  # Don't redirect if file exists - this allows static files to be served normally
 
 # Headers for better PWA support
 [[headers]]
@@ -36,12 +38,16 @@
 [[headers]]
   for = "/sw.js"
   [headers.values]
+    # Serve service worker with correct MIME type
+    Content-Type = "application/javascript"
     # Prevent caching of service worker
     Cache-Control = "no-cache, no-store, must-revalidate"
 
 [[headers]]
   for = "/manifest.json"
   [headers.values]
+    # Serve manifest with correct MIME type
+    Content-Type = "application/manifest+json"
     # Cache manifest for 1 hour
     Cache-Control = "public, max-age=3600"
 
