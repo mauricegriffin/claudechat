@@ -191,8 +191,8 @@ export default function Chat({ user, onLogout }) {
           <IconButton
             icon="hamburger"
             onClick={() => setShowUserMenu(!showUserMenu)}
-            color="white"
-            variant="outline"
+            color="on-primary"
+            variant="fill"
             size="md"
             aria-label="Open navigation menu"
             className="hamburger-menu-button"
