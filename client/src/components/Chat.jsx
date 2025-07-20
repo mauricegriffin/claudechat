@@ -185,8 +185,8 @@ export default function Chat({ user, onLogout }) {
   }
 
   return (
-    // Main chat container with full height using LiftKit
-    <div className="flex flex-col h-screen bg-surface">
+    // Main chat container with full viewport height
+    <div className="chat-container bg-surface">
       {/* Navigation Bar using LiftKit Card for consistent theming */}
       <Card 
         material="primary" 
@@ -255,7 +255,7 @@ export default function Chat({ user, onLogout }) {
 
 
       {/* Chat Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 bg-surface">
+      <div className="chat-messages p-4 bg-surface">
         <Container className="max-w-4xl mx-auto">
           {messages.map((message) => {
             const isOwnMessage = message.user_id === user.id
@@ -307,7 +307,7 @@ export default function Chat({ user, onLogout }) {
       {/* Message Input Area using LiftKit components */}
       <Card 
         material="surface-container-high" 
-        className="rounded-none shadow-lg"
+        className="chat-input rounded-none shadow-lg"
       >
         <Container className="max-w-4xl mx-auto">
           <form onSubmit={handleSendMessage} className="p-4">
@@ -356,30 +356,65 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
 
   const handleUpdateUsername = async (e) => {
     e.preventDefault()
-    if (!newUsername.trim() || newUsername === userProfile?.username) return
+    console.log('Form submitted with username:', newUsername)
+    
+    if (!newUsername.trim() || newUsername === userProfile?.username) {
+      console.log('Form validation failed:', { newUsername: newUsername.trim(), currentUsername: userProfile?.username })
+      return
+    }
 
     setLoading(true)
     setError('')
     setSuccess('')
 
     try {
-      // Update username in user_profiles table
-      // Using upsert to handle both insert and update cases
-      const { error } = await supabase
+      console.log('Attempting to update username for user:', user.id)
+      
+      // First try to update existing profile
+      const { data: updateData, error: updateError } = await supabase
         .from('user_profiles')
-        .upsert({
-          user_id: user.id,
+        .update({
           username: newUsername.trim(),
           updated_at: new Date().toISOString()
         })
+        .eq('user_id', user.id)
+        .select()
+
+      let data, error;
+      
+      // If update failed because no row exists, insert new profile
+      if (updateError || !updateData || updateData.length === 0) {
+        console.log('No existing profile found, creating new one...')
+        const { data: insertData, error: insertError } = await supabase
+          .from('user_profiles')
+          .insert({
+            user_id: user.id,
+            username: newUsername.trim(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+        
+        data = insertData;
+        error = insertError;
+      } else {
+        data = updateData;
+        error = updateError;
+      }
+
+      console.log('Supabase response:', { data, error })
 
       if (error) throw error
 
       setSuccess('Username updated successfully!')
       onProfileUpdate() // Refresh profile data
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccess('')
+      }, 3000)
     } catch (error) {
       console.error('Error updating username:', error)
-      setError(error.message)
+      setError(error.message || 'Failed to update username')
     } finally {
       setLoading(false)
     }
@@ -418,15 +453,31 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
           <form onSubmit={handleUpdateUsername}>
             {/* Error/Success Messages */}
             {error && (
-              <div className="bg-error-container color-on-error-container p-4 rounded-lg mb-4">
-                <Text fontClass="body">{error}</Text>
-              </div>
+              <Card 
+                material="error-container" 
+                className="p-4 mb-4 border-l-4 border-l-red-500"
+              >
+                <Row className="items-center gap-3">
+                  <span className="text-xl text-red-600">❌</span>
+                  <Text fontClass="body" color="on-error-container" className="font-semibold">
+                    {error}
+                  </Text>
+                </Row>
+              </Card>
             )}
             
             {success && (
-              <div className="bg-tertiary-container color-on-tertiary-container p-4 rounded-lg mb-4">
-                <Text fontClass="body">{success}</Text>
-              </div>
+              <Card 
+                material="success-container" 
+                className="p-4 mb-4 border-l-4 border-l-green-500"
+              >
+                <Row className="items-center gap-3">
+                  <span className="text-xl text-green-600">✅</span>
+                  <Text fontClass="body" color="on-success-container" className="font-semibold">
+                    {success}
+                  </Text>
+                </Row>
+              </Card>
             )}
 
             {/* Username Input using LiftKit */}
@@ -446,11 +497,16 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
             <Button
               type="submit"
               variant="fill"
-              color="primary"
-              label={loading ? 'Updating...' : 'Update Username'}
+              color={success ? "success" : "primary"}
+              label={
+                loading ? 'Updating...' : 
+                success ? '✅ Updated!' : 
+                'Update Username'
+              }
               disabled={loading || !newUsername.trim() || newUsername === userProfile?.username}
               size="lg"
               className="w-full"
+              onClick={handleUpdateUsername}
             />
           </form>
 

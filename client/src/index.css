@@ -12,6 +12,24 @@
   box-sizing: border-box;
 }
 
+/* Cross-browser compatibility fixes */
+html {
+  /* Prevent Safari from zooming on input focus */
+  -webkit-text-size-adjust: 100%;
+  /* Ensure consistent font rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  /* Prevent Safari from adding margins */
+  -webkit-margin-before: 0;
+  -webkit-margin-after: 0;
+  /* Ensure proper viewport behavior */
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 /* Enhanced Body styles with better Material 3 theming */
 body {
   font-family: 'Roboto', sans-serif;
@@ -23,8 +41,11 @@ body {
     var(--lk-color-surface-variant, #f4eff4) 100%);
   color: var(--lk-color-on-surface, #1c1b1f);
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   padding: 0;
+  /* Safari-specific fixes */
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Enhanced Root container */
@@ -90,6 +111,9 @@ button, input, [role="button"], [data-lk-component] {
   letter-spacing: 0.025em;
   position: relative;
   overflow: hidden;
+  /* Safari-specific fixes */
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Button variants */
@@ -191,6 +215,12 @@ button, input, [role="button"], [data-lk-component] {
   font-family: 'Roboto', sans-serif;
   transition: all 0.2s ease-in-out;
   outline: none;
+  /* Safari-specific fixes */
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  /* Prevent Safari from adding default styling */
+  -webkit-border-radius: var(--lk-shape-corner-sm, 8px);
+  -moz-border-radius: var(--lk-shape-corner-sm, 8px);
 }
 
 [data-lk-component="text-input"] input:focus {
@@ -367,6 +397,7 @@ button, input, [role="button"], [data-lk-component] {
 /* Enhanced flex utilities */
 .flex { display: flex; }
 .flex-1 { flex: 1; }
+.flex-shrink-0 { flex-shrink: 0; }
 .flex-col { flex-direction: column; }
 .items-center { align-items: center; }
 .items-start { align-items: flex-start; }
@@ -423,6 +454,41 @@ button, input, [role="button"], [data-lk-component] {
 
 /* Enhanced height utilities */
 .h-screen { height: 100vh; }
+.flex-col { flex-direction: column; }
+.min-h-0 { min-height: 0; }
+
+/* Chat layout specific styles */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile browsers */
+  overflow: hidden;
+  /* Safari-specific fixes */
+  -webkit-overflow-scrolling: touch;
+  /* Ensure proper flex behavior in Safari */
+  min-height: 0;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  /* Safari-specific fixes */
+  -webkit-overflow-scrolling: touch;
+  /* Prevent Safari from adding extra padding */
+  -webkit-padding-start: 0;
+  -webkit-padding-end: 0;
+}
+
+.chat-input {
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  /* Safari-specific fixes */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
 .h-10 { height: 2.5rem; }
 .w-10 { width: 2.5rem; }
 
@@ -445,6 +511,47 @@ button, input, [role="button"], [data-lk-component] {
 
 /* Enhanced border radius utilities */
 .rounded-full { border-radius: 9999px; }
+
+/* Enhanced border left utilities for feedback messages */
+.border-l-4 { border-left-width: 4px; border-left-style: solid; }
+.border-l-green-500 { border-left-color: #10b981; }
+.border-l-red-500 { border-left-color: #ef4444; }
+
+/* Enhanced text colors for feedback */
+.text-green-600 { color: #16a34a; }
+.text-red-600 { color: #dc2626; }
+
+/* Safari-specific fixes for common rendering issues */
+@supports (-webkit-touch-callout: none) {
+  /* Safari-specific styles */
+  .chat-container {
+    /* Force hardware acceleration in Safari */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+  
+  /* Fix Safari flexbox issues */
+  .flex {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: flex;
+  }
+  
+  .flex-col {
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+  }
+  
+  /* Fix Safari button rendering */
+  [data-lk-component="button"] {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+}
 
 /* Minimal Material UI overrides for remaining components */
 /* Only keeping Divider component styling since it's still used */
