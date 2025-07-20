@@ -1,0 +1,47 @@
+[build]
+  # Directory to change to before starting build
+  base = ""
+  
+  # Build command
+  command = "npm run build"
+  
+  # Directory that contains the deploy-ready files
+  publish = "dist"
+
+[build.environment]
+  # Node version for builds
+  NODE_VERSION = "18"
+
+# SPA redirect rule - all routes go to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for better PWA support
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Allow service worker to control all paths
+    Service-Worker-Allowed = "/"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    # Prevent caching of service worker
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    # Cache manifest for 1 hour
+    Cache-Control = "public, max-age=3600"
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(self), microphone=(), camera=()"

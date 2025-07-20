@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient'
 import Login from './components/Login'
 import Signup from './components/Signup'
 import Chat from './components/Chat'
+import UpdateNotification from './components/UpdateNotification'
 // Import LiftKit components for layout and UI
 // LiftKit provides a complete design system based on Material 3 and golden ratio
 import Container from '@/components/container'
@@ -74,6 +75,7 @@ function App() {
   if (user) {
     return (
       <ThemeProvider>
+        <UpdateNotification />
         <Chat user={user} onLogout={handleLogout} />
       </ThemeProvider>
     )

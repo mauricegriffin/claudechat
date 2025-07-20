@@ -183,175 +183,197 @@ export default function Chat({ user, onLogout }) {
 
   return (
     // Main chat container with full viewport height
-    <div className="chat-container bg-surface">
-      {/* Navigation Bar using LiftKit Card with primary container theming */}
+    <div className="chat-container">
+      {/* Navigation Bar using LiftKit */}
       <Card 
-        material="primary-container" 
-        className="rounded-none shadow-md"
+        material="glass"
+        materialProps={{
+          thickness: "normal",
+          tint: "primary",
+          tintOpacity: 0.8,
+          light: true
+        }}
       >
-        <Row className="p-0 items-center justify-between">
-          {/* Hamburger menu button - upper left */}
+        <Row padding="sm" alignItems="center" justifyContent="space-between">
+          {/* Hamburger menu button */}
           <IconButton
-            icon="align-justify"
+            icon="hamburger"
             onClick={() => setShowUserMenu(!showUserMenu)}
-            color="on-primary-container"
-            variant="text"
+            color="white"
+            variant="outline"
             size="md"
             aria-label="Open navigation menu"
-            className="text-white"
+            className="hamburger-menu-button"
           />
           
-
-          
-          {/* Username display - upper right */}
-          <Text 
-            fontClass="caption" 
-            color="on-primary-container" 
-            className="opacity-70"
-          >
+          {/* Username display */}
+          <Text fontClass="caption" color="on-primary">
             {userProfile?.username || user.email.split('@')[0]}
           </Text>
         </Row>
       </Card>
 
-      {/* Side Navigation Overlay */}
+      {/* Overlay */}
       {showUserMenu && (
-        <>
-          {/* Dark overlay */}
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40"
-            onClick={() => setShowUserMenu(false)}
-          />
-          
-          {/* Sliding side navigation */}
-          <div className={`fixed top-0 left-0 h-screen w-80 bg-surface-container-highest shadow-2xl z-50 transform transition-transform duration-300 ${showUserMenu ? 'translate-x-0' : '-translate-x-full'}`}>
-            <Card material="surface-container-highest" className="h-full rounded-none p-0">
-              {/* Navigation header */}
-              <div className="p-6 border-b border-outline-variant">
-                <Row className="items-center justify-between mb-4">
-                  <Text fontClass="title1" color="on-surface" className="font-semibold">
-                    Menu
-                  </Text>
-                  <IconButton
-                    icon="x"
-                    onClick={() => setShowUserMenu(false)}
-                    color="on-surface"
-                    variant="text"
-                    size="sm"
-                    aria-label="Close menu"
-                  />
-                </Row>
-                
-                {/* User info in sidebar */}
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
-                    <Text fontClass="body" color="on-primary" className="font-semibold">
-                      {(userProfile?.username || user.email)[0].toUpperCase()}
-                    </Text>
+        <div className="sidebar-overlay" onClick={() => setShowUserMenu(false)} />
+      )}
+      
+      {/* Sidebar - always rendered but translated off-screen */}
+      <div 
+        className={`sidebar-navigation ${showUserMenu ? 'open' : ''}`}
+      >
+        <div 
+          style={{
+            height: '100%', 
+            backgroundColor: 'var(--lk-surface)', 
+            padding: '1rem'
+          }}
+        >
+              {/* Header */}
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+                <h2 style={{color: 'var(--lk-on-surface)', margin: 0}}>Menu</h2>
+
+                  <IconButton key="search" 
+                  icon="search" variant="text" color="white" onClick={() => setShowUserMenu(false)} />
+
+                  
+              </div>
+              
+              {/* User info */}
+              <div style={{display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem'}}>
+                <div className="user-avatar" style={{backgroundColor: 'var(--lk-primary)'}}>
+                  <span style={{color: 'var(--lk-on-primary)'}}>
+                    {(userProfile?.username || user.email)[0].toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <div style={{color: 'var(--lk-on-surface)'}}>
+                    {userProfile?.username || user.email.split('@')[0]}
                   </div>
-                  <div>
-                    <Text fontClass="body" color="on-surface" className="font-semibold">
-                      {userProfile?.username || user.email.split('@')[0]}
-                    </Text>
-                    <Text fontClass="caption" color="on-surface-variant">
-                      {user.email}
-                    </Text>
+                  <div style={{color: 'var(--lk-on-surface-variant)', fontSize: '0.875rem'}}>
+                    {user.email}
                   </div>
                 </div>
               </div>
               
-                             {/* Navigation items */}
-               <div className="p-4">
-                 <div className="flex flex-col gap-2">
-                   <Button
-                     variant="text"
-                     color="on-surface"
-                     label="Settings"
-                     startIcon="settings"
-                     onClick={() => {
-                       handleSettingsClick();
-                       setShowUserMenu(false);
-                     }}
-                     className="w-full justify-start text-left text-white"
-                   />
-                   <Button
-                     variant="text"
-                     color="on-surface"
-                     label="Logout"
-                     startIcon="log-out"
-                     onClick={() => {
-                       handleLogout();
-                       setShowUserMenu(false);
-                     }}
-                     className="w-full justify-start text-left text-white"
-                   />
-                 </div>
-               </div>
-            </Card>
+              {/* Menu items */}
+              <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSettings(true);
+                    setShowUserMenu(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    background: 'transparent',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    textAlign: 'left',
+                    color: 'var(--lk-on-surface)'
+                  }}
+                >
+                  <span>⚙️</span>
+                  <span>Settings</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    onLogout();
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    background: 'transparent',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    textAlign: 'left',
+                    color: 'var(--lk-error)'
+                  }}
+                >
+                  <span>🚪</span>
+                  <span>Logout</span>
+                </button>
           </div>
-        </>
-      )}
+        </div>
+      </div>
 
       {/* Chat Messages Area */}
-      <div className="chat-messages p-4 bg-surface">
-        <Container className="max-w-4xl mx-auto px-6">
-          {messages.map((message) => {
-            const isOwnMessage = message.user_id === user.id
-            return (
-              <div
-                key={message.id}
-                className={`flex mb-4 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+      <div className="chat-messages">
+        {messages.map((message) => {
+          const isOwnMessage = message.user_id === user.id
+          return (
+            <div
+              key={message.id}
+              className={`message-wrapper ${isOwnMessage ? 'own-message' : 'other-message'}`}
+            >
+              <Card
+                material={isOwnMessage ? "surface" : "surface"}
+                className="message-bubble"
+                style={isOwnMessage ? {
+                  backgroundColor: '#2d1570' // Even darker purple
+                } : {
+                  backgroundColor: 'ontertiary' // Even darker purple
+                }}
               >
-                {/* Message bubble using LiftKit Card with proper material design */}
-                <Card
-                  material={isOwnMessage ? "primary-container" : "surface-container-high"}
-                  className="max-w-[70%] p-2 mx-2"
+                {/* Username for other users */}
+                {!isOwnMessage && (
+                  <Text fontClass="label" color="primary">
+                    {message.username || 'Unknown User'}
+                  </Text>
+                )}
+                
+                {/* Message content */}
+                <Text 
+                  fontClass="body"
+                  color={isOwnMessage ? "on-primary" : "white"}
                 >
-                  {/* Username - show for other users' messages */}
-                  {!isOwnMessage && (
-                    <Text 
-                      fontClass="label" 
-                      color={isOwnMessage ? "on-primary" : "primary"}
-                      className="mb-1 font-semibold"
-                    >
-                      {message.username || 'Unknown User'}
-                    </Text>
-                  )}
-                  
-                  {/* Message content */}
-                  <Text 
-                    fontClass="body"
-                    color={isOwnMessage ? "on-primary-container" : "on-surface"}
-                  >
-                    {message.content}
-                  </Text>
-                  
-                  {/* Timestamp */}
-                  <Text 
-                    fontClass="caption"
-                    color={isOwnMessage ? "on-primary-container" : "on-surface-variant"}
-                    className="mt-1 opacity-70"
-                  >
-                    {formatTime(message.created_at)}
-                  </Text>
-                </Card>
-              </div>
-            )
-          })}
-          <div ref={messagesEndRef} />
-        </Container>
+                  {message.content}
+                </Text>
+                
+                {/* Timestamp */}
+                <Text 
+                  fontClass="caption"
+                  color={isOwnMessage ? "on-primary" : "white"}
+                  style={{opacity: 0.7}}
+                >
+                  {formatTime(message.created_at)}
+                </Text>
+              </Card>
+            </div>
+          )
+        })}
+        <div ref={messagesEndRef} className="messages-end-marker" />
       </div>
 
       {/* Message Input Area using LiftKit components */}
       <Card 
-        material="surface-container-high" 
-        className="chat-input rounded-none shadow-lg"
+        material="glass"
+        materialProps={{
+          thickness: "thick",
+          tint: "surface",
+          tintOpacity: 0.9,
+          light: true
+        }}
+        className="chat-input"
       >
-        <Container className="max-w-4xl mx-auto">
-          <form onSubmit={handleSendMessage} className="p-2">
-            <Row className="gap-2 items-center">
+        <Container maxWidth="4xl">
+          <form onSubmit={handleSendMessage}>
+            <Row gap="sm" alignItems="center" padding="sm">
               {/* Message input field using LiftKit TextInput */}
-              <div className="flex-1">
+              <div style={{flex: 1}}>
                 <TextInput
                   name="Message"
                   placeholder="Type a message..."
@@ -372,7 +394,7 @@ export default function Chat({ user, onLogout }) {
                 startIcon={loading ? "loader-2" : "send"}
                 disabled={loading || !newMessage.trim()}
                 size="lg"
-                className="min-w-[48px] h-[48px] rounded-full"
+                style={{minWidth: '48px', height: '48px', borderRadius: '9999px'}}
               />
             </Row>
           </form>
@@ -459,32 +481,37 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-surface">
+    <div style={{display: 'flex', flexDirection: 'column', height: '100vh'}}>
       {/* Settings Header using LiftKit Card */}
       <Card 
-        material="primary" 
-        className="rounded-none shadow-md"
+        material="primary"
+        borderRadius="none"
+        shadow="md"
       >
-        <Row className="p-4 items-center">
+        <Row padding="md" alignItems="center">
           {/* Back button using LiftKit */}
           <Button
             variant="text"
             color="on-primary"
             label="← Back to Chat"
             onClick={onBack}
-            className="mr-4"
+            marginRight="md"
           />
-          <Text fontClass="title1" color="on-primary" className="flex-1">
+          <Text fontClass="title1" color="on-primary" style={{flex: 1}}>
             Settings
           </Text>
         </Row>
       </Card>
 
       {/* Settings Content */}
-      <Container className="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto w-full">
-        <Card material="surface-container-high" className="p-6">
+      <Container 
+        style={{flex: 1, overflowY: 'auto', width: '100%'}} 
+        maxWidth="2xl" 
+        padding="md"
+      >
+        <Card material="surface-container-high" padding="lg">
           {/* Title using LiftKit Text */}
-          <Text fontClass="heading" className="mb-6">
+          <Text fontClass="heading" marginBottom="lg">
             Account Settings
           </Text>
           
@@ -492,12 +519,14 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
             {/* Error/Success Messages */}
             {error && (
               <Card 
-                material="error-container" 
-                className="p-4 mb-4 border-l-4 border-l-red-500"
+                material="error-container"
+                padding="md"
+                marginBottom="md"
+                style={{borderLeft: '4px solid rgb(239 68 68)'}}
               >
-                <Row className="items-center gap-3">
-                  <span className="text-xl text-red-600">❌</span>
-                  <Text fontClass="body" color="on-error-container" className="font-semibold">
+                <Row alignItems="center" gap="sm">
+                  <span style={{fontSize: '1.25rem', color: 'rgb(220 38 38)'}}>❌</span>
+                  <Text fontClass="body" color="on-error-container" fontWeight="semibold">
                     {error}
                   </Text>
                 </Row>
@@ -506,12 +535,14 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
             
             {success && (
               <Card 
-                material="success-container" 
-                className="p-4 mb-4 border-l-4 border-l-green-500"
+                material="success-container"
+                padding="md"
+                marginBottom="md"
+                style={{borderLeft: '4px solid rgb(34 197 94)'}}
               >
-                <Row className="items-center gap-3">
-                  <span className="text-xl text-green-600">✅</span>
-                  <Text fontClass="body" color="on-success-container" className="font-semibold">
+                <Row alignItems="center" gap="sm">
+                  <span style={{fontSize: '1.25rem', color: 'rgb(22 163 74)'}}>✅</span>
+                  <Text fontClass="body" color="on-success-container" fontWeight="semibold">
                     {success}
                   </Text>
                 </Row>
@@ -519,7 +550,7 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
             )}
 
             {/* Username Input using LiftKit */}
-            <div className="mb-6">
+            <div style={{marginBottom: '1.5rem'}}>
               <TextInput
                 name="Username"
                 value={newUsername}
@@ -543,45 +574,44 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
               }
               disabled={loading || !newUsername.trim() || newUsername === userProfile?.username}
               size="lg"
-              className="w-full"
+              style={{width: '100%'}}
               onClick={handleUpdateUsername}
             />
           </form>
 
           {/* Divider using LiftKit styling */}
-          <div className="divider my-6" />
-
+          <div style={{height: '1px', backgroundColor: 'var(--lk-outline)', margin: '1.5rem 0'}} />
 
           {/* Account Information using LiftKit components */}
-          <Text fontClass="title1" className="mb-4">
+          <Text fontClass="title1" marginBottom="md">
             Account Information
           </Text>
-          <div className="space-y-4">
-            <div className="p-4 bg-surface-container rounded-lg">
-              <Text fontClass="label" className="font-semibold mb-1">
+          <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+            <Card material="surface-container" padding="md" borderRadius="lg">
+              <Text fontClass="label" fontWeight="semibold" marginBottom="xs">
                 Email
               </Text>
               <Text fontClass="body" color="on-surface-variant">
                 {user.email}
               </Text>
-            </div>
-            <div className="p-4 bg-surface-container rounded-lg">
-              <Text fontClass="label" className="font-semibold mb-1">
+            </Card>
+            <Card material="surface-container" padding="md" borderRadius="lg">
+              <Text fontClass="label" fontWeight="semibold" marginBottom="xs">
                 User ID
               </Text>
-              <Text fontClass="body" color="on-surface-variant" className="font-mono text-sm">
+              <Text fontClass="body" color="on-surface-variant" style={{fontFamily: 'monospace', fontSize: '0.875rem'}}>
                 {user.id}
               </Text>
-            </div>
+            </Card>
             {userProfile && (
-              <div className="p-4 bg-surface-container rounded-lg">
-                <Text fontClass="label" className="font-semibold mb-1">
+              <Card material="surface-container" padding="md" borderRadius="lg">
+                <Text fontClass="label" fontWeight="semibold" marginBottom="xs">
                   Current Username
                 </Text>
                 <Text fontClass="body" color="on-surface-variant">
                   {userProfile.username}
                 </Text>
-              </div>
+              </Card>
             )}
           </div>
         </Card>

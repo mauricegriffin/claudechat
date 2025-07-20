@@ -23,7 +23,7 @@
     
     <title>ClaudeChat - Real-time Messaging</title>
     
-    <!-- Service Worker Registration - Disabled in Development -->
+    <!-- Service Worker Registration with Auto-Update -->
     <script>
       // Only register service worker in production
       const isDevelopment = window.location.hostname === 'localhost' || 
@@ -32,9 +32,54 @@
       
       if ('serviceWorker' in navigator && !isDevelopment) {
         window.addEventListener('load', () => {
+          let refreshing = false;
+          
           navigator.serviceWorker.register('/sw.js')
-            .then(registration => console.log('SW registered:', registration))
+            .then(registration => {
+              console.log('SW registered:', registration);
+              
+              // Check for updates every 30 seconds when online
+              if (navigator.onLine) {
+                setInterval(() => {
+                  registration.update();
+                }, 30000);
+              }
+              
+              // Listen for new service worker waiting
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                console.log('New service worker found, installing...');
+                
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New update available
+                    console.log('New version available! Refreshing...');
+                    
+                    // Show update notification
+                    if (window.showUpdateNotification) {
+                      window.showUpdateNotification();
+                    } else {
+                      // Auto-refresh after a short delay
+                      setTimeout(() => {
+                        if (!refreshing) {
+                          refreshing = true;
+                          window.location.reload();
+                        }
+                      }, 2000);
+                    }
+                  }
+                });
+              });
+            })
             .catch(error => console.log('SW registration failed:', error));
+          
+          // Handle controller change (new SW activated)
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+              refreshing = true;
+              window.location.reload();
+            }
+          });
         });
       } else if (isDevelopment) {
         console.log('Service Worker disabled in development mode for better hot reload');
