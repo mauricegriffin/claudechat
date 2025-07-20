@@ -1,0 +1,49 @@
+/* Text Component CSS */
+/* LiftKit Text component styles */
+
+[data-lk-component="text"] {
+  /* Base text styling - inherits from typography classes */
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+/* Ensure color classes work properly */
+[data-lk-component="text"].color-primary {
+  color: var(--lk-color-primary, #6750a4);
+}
+
+[data-lk-component="text"].color-on-primary {
+  color: var(--lk-color-on-primary, #ffffff);
+}
+
+[data-lk-component="text"].color-on-surface {
+  color: var(--lk-color-on-surface, #1c1b1f);
+}
+
+[data-lk-component="text"].color-on-surface-variant {
+  color: var(--lk-color-on-surface-variant, #49454f);
+}
+
+[data-lk-component="text"].color-error {
+  color: var(--lk-color-error, #ba1a1a);
+}
+
+[data-lk-component="text"].color-on-error {
+  color: var(--lk-color-on-error, #ffffff);
+}
+
+[data-lk-component="text"].color-outline {
+  color: var(--lk-color-outline, #79747e);
+}
+
+/* Ensure inline text elements work properly */
+[data-lk-component="text"] span,
+[data-lk-component="text"] p,
+[data-lk-component="text"] div {
+  display: inherit;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
