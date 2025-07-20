@@ -1,6 +1,6 @@
 [build]
   # Directory to change to before starting build
-  base = ""
+  base = "client"
   
   # Build command
   command = "npm run build"
