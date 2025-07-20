@@ -427,16 +427,29 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
     
     // Check if app is already installed
     const isStandalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches
-    console.log('Is app in standalone mode:', isStandalone)
+    const isIOSStandalone = window.navigator.standalone === true
+    console.log('Is app in standalone mode:', isStandalone || isIOSStandalone)
     
-    if (isStandalone) {
+    if (isStandalone || isIOSStandalone) {
       setIsInstallable(false)
+    }
+    
+    // Check for iOS Safari (can show manual install instructions)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    const isIOSSafari = isIOS && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent)
+    
+    // Show install option for iOS Safari even without beforeinstallprompt
+    if (isIOSSafari && !isIOSStandalone) {
+      setIsInstallable(true)
     }
     
     // Debug info
     console.log('PWA Debug Info:', {
       userAgent: navigator.userAgent,
       isStandalone,
+      isIOSStandalone,
+      isIOS,
+      isIOSSafari,
       hasServiceWorker: 'serviceWorker' in navigator,
       currentURL: window.location.href
     })
@@ -447,6 +460,16 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
   }, [])
   
   const handleInstallApp = async () => {
+    // Check if this is iOS Safari (no beforeinstallprompt available)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    const isIOSSafari = isIOS && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent)
+    
+    if (isIOSSafari && !deferredPrompt) {
+      // Show iOS install instructions
+      alert('To install ClaudeChat on iOS:\n\n1. Tap the Share button (⬆️) in Safari\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" to install the app')
+      return
+    }
+    
     if (!deferredPrompt) return
     
     deferredPrompt.prompt()
@@ -641,8 +664,10 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
                 </Text>
                 <Text fontClass="body" color="on-surface-variant" marginBottom="sm">
                   {isInstallable 
-                    ? "Install ClaudeChat on your device for a native app experience"
-                    : window.matchMedia && window.matchMedia('(display-mode: standalone)').matches
+                    ? /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent)
+                      ? "Install ClaudeChat as an app on your iOS device using Safari's Share menu"
+                      : "Install ClaudeChat on your device for a native app experience"
+                    : (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true
                       ? "App is already installed"
                       : "Install option will appear when available. Check browser console for debug info."
                   }
