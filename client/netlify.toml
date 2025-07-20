@@ -11,6 +11,10 @@
 [build.environment]
   # Node version for builds
   NODE_VERSION = "18"
+  # Force npm instead of yarn
+  NPM_FLAGS = "--force"
+  # Tell Netlify to use npm
+  NETLIFY_USE_YARN = "false"
 
 # SPA redirect rule - all routes go to index.html
 [[redirects]]
