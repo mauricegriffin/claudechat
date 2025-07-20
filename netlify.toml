@@ -1,20 +1,22 @@
 [build]
-  # Directory to change to before starting build
-  base = "client"
+  # Build from repository root
+  base = ""
   
-  # Build command
-  command = "npm run build"
+  # Build command - use root package.json scripts
+  command = "npm run install:all && npm run build"
   
   # Directory that contains the deploy-ready files
-  publish = "dist"
+  publish = "client/dist"
 
 [build.environment]
-  # Node version for builds
-  NODE_VERSION = "18"
+  # Node version for builds - use LTS version
+  NODE_VERSION = "18.20.5"
   # Force npm instead of yarn
   NPM_FLAGS = "--force"
   # Tell Netlify to use npm
   NETLIFY_USE_YARN = "false"
+  # Explicitly set npm as package manager
+  YARN_VERSION = "0"
 
 # SPA redirect rule - all routes go to index.html
 [[redirects]]
