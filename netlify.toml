@@ -1,12 +1,12 @@
 [build]
-  # Build from repository root
+  # Build from repository root (flattened structure)
   base = ""
   
-  # Build command - use root package.json scripts
-  command = "npm run install:all && npm run build"
+  # Build command - standard Vite build
+  command = "npm install && npm run build"
   
   # Directory that contains the deploy-ready files
-  publish = "client/dist"
+  publish = "dist"
 
 [build.environment]
   # Node version for builds - use LTS version
