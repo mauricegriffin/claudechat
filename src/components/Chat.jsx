@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 
 // Import LiftKit components where available
@@ -38,13 +38,8 @@ export default function Chat({ user, onLogout }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showUserMenu])
 
-  // Fetch user profile on component mount
-  useEffect(() => {
-    fetchUserProfile()
-  }, [user])
-
   // Fetch user profile from database
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
@@ -60,7 +55,12 @@ export default function Chat({ user, onLogout }) {
     } catch (error) {
       console.error('Error fetching user profile:', error)
     }
-  }
+  }, [user.id])
+
+  // Fetch user profile on component mount
+  useEffect(() => {
+    fetchUserProfile()
+  }, [user, fetchUserProfile])
 
   // Fetch messages on component mount
   useEffect(() => {
@@ -147,15 +147,7 @@ export default function Chat({ user, onLogout }) {
     }
   }
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    onLogout()
-  }
-
-  const handleSettingsClick = () => {
-    setShowSettings(true)
-    setShowUserMenu(false)
-  }
+  // Handlers moved to inline usage to avoid unused variable errors
 
   const handleBackToChat = () => {
     setShowSettings(false)
@@ -390,7 +382,6 @@ export default function Chat({ user, onLogout }) {
                 type="submit"
                 variant="fill"
                 color="primary"
-                label=""
                 startIcon={loading ? "loader-2" : "send"}
                 disabled={loading || !newMessage.trim()}
                 size="lg"
