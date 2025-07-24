@@ -11,6 +11,14 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  // Ensure public directory files are served correctly
+  publicDir: 'public',
+  build: {
+    // Copy public files to dist
+    copyPublicDir: true,
+    // Generate source maps for better debugging
+    sourcemap: true,
+  },
   server: {
     hmr: {
       overlay: true

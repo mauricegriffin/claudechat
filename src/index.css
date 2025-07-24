@@ -128,3 +128,76 @@ body {
     transform: translate3d(0, 0, 0);
   }
 }
+
+/* Responsive Design - Mobile First Approach */
+@media (max-width: 768px) {
+  /* Adjust chat container for mobile */
+  .chat-container {
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile browsers */
+  }
+  
+  /* Smaller padding on mobile */
+  .chat-messages {
+    padding: 0.5rem;
+  }
+  
+  /* Full width message bubbles on small screens */
+  .message-bubble {
+    max-width: 90%;
+  }
+  
+  /* Adjust sidebar for mobile */
+  .sidebar-navigation {
+    width: 85vw;
+    max-width: 20rem;
+  }
+  
+  /* Smaller user avatar on mobile */
+  .user-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  /* Ensure input is accessible on mobile keyboards */
+  .chat-input {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .message-bubble {
+    max-width: 70%;
+  }
+}
+
+/* Landscape mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .chat-messages {
+    padding: 0.25rem;
+  }
+  
+  .chat-input {
+    padding: 0.5rem;
+  }
+}
+
+/* High resolution displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Ensure crisp borders and text */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Prevent zoom on input focus for iOS */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  textarea {
+    font-size: 16px !important;
+  }
+}

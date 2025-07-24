@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
-import Login from './components/Login'
-import Signup from './components/Signup'
-import Chat from './components/Chat'
-import UpdateNotification from './components/UpdateNotification'
+import Login from './features/auth/components/Login'
+import Signup from './features/auth/components/Signup'
+import Chat from './features/chat/components/Chat'
+import UpdateNotification from './ui/components/UpdateNotification'
 // Import LiftKit components for layout and UI
 // LiftKit provides a complete design system based on Material 3 and golden ratio
-import Container from '@/components/container'
-import Button from '@/components/button'
-import Text from '@/components/text'
+import Container from '@/ui/components/container'
+import Button from '@/ui/components/button'
+import Text from '@/ui/components/text'
 // Import LiftKit Theme components for color customization
-import ThemeProvider from '@/components/theme'
+import ThemeProvider from '@/ui/components/theme'
 
 function App() {
   // User authentication state

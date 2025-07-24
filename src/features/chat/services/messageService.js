@@ -1,0 +1,74 @@
+import { supabase } from '@/supabaseClient'
+
+export const messageService = {
+  async fetchMessages() {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .order('created_at', { ascending: true })
+    
+    if (error) throw error
+    return data || []
+  },
+
+  async fetchMessagesWithUsername() {
+    const { data, error } = await supabase
+      .from('messages_with_username')
+      .select('*')
+      .order('created_at', { ascending: true })
+    
+    if (error) throw error
+    return data || []
+  },
+
+  async fetchNewMessage(messageId) {
+    const { data, error } = await supabase
+      .from('messages_with_username')
+      .select('*')
+      .eq('id', messageId)
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async sendMessage(content, userId) {
+    const { data, error } = await supabase
+      .from('messages')
+      .insert([
+        {
+          content: content,
+          user_id: userId,
+        },
+      ])
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async deleteAllMessages() {
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .neq('id', 0)
+    
+    if (error) throw error
+  },
+
+  subscribeToMessages(callback) {
+    return supabase
+      .channel('messages')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+        },
+        callback
+      )
+      .subscribe()
+  }
+}
