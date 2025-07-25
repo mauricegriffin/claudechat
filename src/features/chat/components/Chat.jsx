@@ -2,17 +2,24 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { authService } from '../../auth/services/authService'
 import { messageService } from '../services/messageService'
 
-// Import LiftKit components where available
-// LiftKit provides Material 3 design components with golden ratio proportions
-import Container from '@/ui/components/container'
-import Card from '@/ui/components/card'
-import Button from '@/ui/components/button'
-import IconButton from '@/ui/components/icon-button'
-import TextInput from '@/ui/components/text-input'
-import Text from '@/ui/components/text'
-import Row from '@/ui/components/row'
-
-// Using LiftKit components exclusively for consistent design system
+// Import shadcn/ui components
+import { Button } from '../../../components/ui/button'
+import { Card, CardContent } from '../../../components/ui/card'
+import { Input } from '../../../components/ui/input'
+import { Label } from '../../../components/ui/label'
+import { ScrollArea } from '../../../components/ui/scroll-area'
+import { Avatar, AvatarFallback } from '../../../components/ui/avatar'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../../../components/ui/sheet'
+import { 
+  Menu, 
+  Search, 
+  Settings, 
+  LogOut, 
+  MessageCircle, 
+  Send, 
+  User,
+  Loader2
+} from 'lucide-react'
 
 export default function Chat({ user, onLogout }) {
   // State management for chat functionality
@@ -134,6 +141,7 @@ export default function Chat({ user, onLogout }) {
   }
 
   // Settings page component
+  console.log('showSettings state:', showSettings);
   if (showSettings) {
     return (
       <SettingsPage 
@@ -146,228 +154,153 @@ export default function Chat({ user, onLogout }) {
   }
 
   return (
-    // Main chat container with full viewport height
-    <div className="chat-container">
-      {/* Navigation Bar using LiftKit */}
-      <Card 
-        material="glass"
-        materialProps={{
-          thickness: "normal",
-          tint: "primary",
-          tintOpacity: 0.8,
-          light: true
-        }}
-      >
-        <Row padding="sm" alignItems="center" justifyContent="space-between">
+    <div className="flex flex-col h-screen">
+      {/* Fixed Navigation Bar */}
+      <Card className="rounded-none border-b bg-red-900 text-white fixed top-0 left-0 right-0 z-50">
+        <CardContent className="flex items-center justify-between p-4">
           {/* Hamburger menu button */}
-          <IconButton
-            icon="menu"
-            onClick={() => setShowUserMenu(!showUserMenu)}
-            variant="text"
-            size="md"
-            aria-label="Open navigation menu"
-            className="hamburger-menu-button"
-            style={{
-              color: 'white',
-              backgroundColor: 'transparent',
-              border: 'none'
-            }}
-          />
+          <Sheet open={showUserMenu} onOpenChange={setShowUserMenu}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/20">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-80">
+              <SheetHeader>
+                <SheetTitle>Menu</SheetTitle>
+              </SheetHeader>
+              <div className="mt-6 space-y-4">
+                {/* User info */}
+                <div className="flex items-center space-x-3">
+                  <Avatar>
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {(userProfile?.username || user.email)[0].toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{userProfile?.username || user.email.split('@')[0]}</p>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                  </div>
+                </div>
+                
+                {/* Menu items */}
+                <div className="space-y-2">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Settings button clicked');
+                      setShowSettings(true);
+                      setShowUserMenu(false);
+                    }}
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-destructive hover:text-destructive"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Logout button clicked');
+                      try {
+                        await authService.signOut();
+                        onLogout();
+                      } catch (error) {
+                        console.error('Logout error:', error);
+                      }
+                    }}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </Button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
           
           {/* Username display */}
-          <Text fontClass="caption" color="on-primary">
+          <span className="text-sm font-medium">
             {userProfile?.username || user.email.split('@')[0]}
-          </Text>
-        </Row>
+          </span>
+        </CardContent>
       </Card>
 
-      {/* Overlay */}
-      {showUserMenu && (
-        <div className="sidebar-overlay" onClick={() => setShowUserMenu(false)} />
-      )}
-      
-      {/* Sidebar - always rendered but translated off-screen */}
-      <div 
-        className={`sidebar-navigation ${showUserMenu ? 'open' : ''}`}
-      >
-        <div 
-          style={{
-            height: '100%', 
-            backgroundColor: 'var(--lk-surface)', 
-            padding: '1rem'
-          }}
-        >
-              {/* Header */}
-              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
-                <h2 style={{color: 'var(--lk-on-surface)', margin: 0}}>Menu</h2>
-
-                  <IconButton key="search" 
-                  icon="search" variant="text" color="white" onClick={() => setShowUserMenu(false)} />
-
-                  
-              </div>
-              
-              {/* User info */}
-              <div style={{display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem'}}>
-                <div className="user-avatar" style={{backgroundColor: 'var(--lk-primary)'}}>
-                  <span style={{color: 'var(--lk-on-primary)'}}>
-                    {(userProfile?.username || user.email)[0].toUpperCase()}
-                  </span>
-                </div>
-                <div>
-                  <div style={{color: 'var(--lk-on-surface)'}}>
-                    {userProfile?.username || user.email.split('@')[0]}
-                  </div>
-                  <div style={{color: 'var(--lk-on-surface-variant)', fontSize: '0.875rem'}}>
-                    {user.email}
+      {/* Main Chat Content - with top padding to account for fixed header */}
+      <div className="flex flex-col h-full pt-16">
+        {/* Chat Messages Area - with bottom padding for fixed input */}
+        <ScrollArea className="flex-1 p-4 pb-20">
+          <div className="space-y-4">
+            {messages.map((message) => {
+              const isOwnMessage = message.user_id === user.id
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`max-w-[75%] ${isOwnMessage ? 'order-2' : 'order-1'}`}>
+                    <Card className={`p-3 ${isOwnMessage ? 'bg-message-outgoing text-message-outgoing-foreground' : 'bg-muted'}`}>
+                      {/* Username for other users */}
+                      {!isOwnMessage && (
+                        <p className="text-xs font-semibold mb-1 text-primary">
+                          {message.username || 'Unknown User'}
+                        </p>
+                      )}
+                      
+                      {/* Message content */}
+                      <p className="text-sm break-words">
+                        {message.content}
+                      </p>
+                      
+                      {/* Timestamp */}
+                      <p className="text-xs opacity-70 mt-1">
+                        {formatTime(message.created_at)}
+                      </p>
+                    </Card>
                   </div>
                 </div>
-              </div>
-              
-              {/* Menu items */}
-              <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSettings(true);
-                    setShowUserMenu(false);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    width: '100%',
-                    padding: '0.75rem 1rem',
-                    background: 'transparent',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    fontSize: '1rem',
-                    textAlign: 'left',
-                    color: 'var(--lk-on-surface)'
-                  }}
-                >
-                  <span>⚙️</span>
-                  <span>Settings</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await authService.signOut();
-                    onLogout();
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    width: '100%',
-                    padding: '0.75rem 1rem',
-                    background: 'transparent',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    fontSize: '1rem',
-                    textAlign: 'left',
-                    color: 'var(--lk-error)'
-                  }}
-                >
-                  <span>🚪</span>
-                  <span>Logout</span>
-                </button>
+              )
+            })}
+            <div ref={messagesEndRef} />
           </div>
-        </div>
-      </div>
+        </ScrollArea>
 
-      {/* Chat Messages Area */}
-      <div className="chat-messages">
-        {messages.map((message) => {
-          const isOwnMessage = message.user_id === user.id
-          return (
-            <div
-              key={message.id}
-              className={`message-wrapper ${isOwnMessage ? 'own-message' : 'other-message'}`}
-            >
-              <Card
-                material={isOwnMessage ? "surface" : "surface"}
-                className="message-bubble"
-                style={isOwnMessage ? {
-                  backgroundColor: '#2d1570' // Even darker purple
-                } : {
-                  backgroundColor: 'ontertiary' // Even darker purple
-                }}
-              >
-                {/* Username for other users */}
-                {!isOwnMessage && (
-                  <Text fontClass="label" color="primary">
-                    {message.username || 'Unknown User'}
-                  </Text>
-                )}
-                
-                {/* Message content */}
-                <Text 
-                  fontClass="body"
-                  color={isOwnMessage ? "on-primary" : "white"}
-                >
-                  {message.content}
-                </Text>
-                
-                {/* Timestamp */}
-                <Text 
-                  fontClass="caption"
-                  color={isOwnMessage ? "on-primary" : "white"}
-                  style={{opacity: 0.7}}
-                >
-                  {formatTime(message.created_at)}
-                </Text>
-              </Card>
-            </div>
-          )
-        })}
-        <div ref={messagesEndRef} className="messages-end-marker" />
-      </div>
-
-      {/* Message Input Area using LiftKit components */}
-      <Card 
-        material="glass"
-        materialProps={{
-          thickness: "thick",
-          tint: "surface",
-          tintOpacity: 0.9,
-          light: true
-        }}
-        className="chat-input"
-      >
-        <Container maxWidth="4xl">
-          <form onSubmit={handleSendMessage}>
-            <Row gap="sm" alignItems="center" padding="sm">
-              {/* Message input field using LiftKit TextInput */}
-              <div style={{flex: 1}}>
-                <TextInput
-                  name="Message"
+        {/* Message Input Area - Fixed to bottom */}
+        <Card className="rounded-none border-t bg-red-900 text-white fixed bottom-0 left-0 right-0 z-40">
+          <CardContent className="p-4">
+            <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
+              {/* Message input field */}
+              <div className="flex-1 relative">
+                <Input
                   placeholder="Type a message..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  labelPosition="hidden"
-                  endIcon="message-circle"
                   disabled={loading}
+                  className="pr-10 bg-black text-white placeholder:text-gray-400"
                 />
+                <MessageCircle className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
               </div>
               
-              {/* Send button using LiftKit IconButton for icon-only design */}
-              <IconButton
+              {/* Send button */}
+              <Button
                 type="submit"
-                variant="fill"
-                color="primary"
-                icon={loading ? "loader-2" : "send"}
+                size="icon"
                 disabled={loading || !newMessage.trim()}
-                size="lg"
-                style={{minWidth: '56px', height: '56px', borderRadius: '28px'}}
-                aria-label="Send message"
-              />
-            </Row>
-          </form>
-        </Container>
-      </Card>
+                className="rounded-full"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
@@ -386,7 +319,6 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
   // Check if app is installable
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
-      console.log('beforeinstallprompt event fired')
       e.preventDefault()
       setDeferredPrompt(e)
       setIsInstallable(true)
@@ -397,7 +329,6 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
     // Check if app is already installed
     const isStandalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches
     const isIOSStandalone = window.navigator.standalone === true
-    console.log('Is app in standalone mode:', isStandalone || isIOSStandalone)
     
     if (isStandalone || isIOSStandalone) {
       setIsInstallable(false)
@@ -413,15 +344,6 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
     }
     
     // Debug info
-    console.log('PWA Debug Info:', {
-      userAgent: navigator.userAgent,
-      isStandalone,
-      isIOSStandalone,
-      isIOS,
-      isIOSSafari,
-      hasServiceWorker: 'serviceWorker' in navigator,
-      currentURL: window.location.href
-    })
     
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
@@ -455,10 +377,8 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
 
   const handleUpdateUsername = async (e) => {
     e.preventDefault()
-    console.log('Form submitted with username:', newUsername)
     
     if (!newUsername.trim() || newUsername === userProfile?.username) {
-      console.log('Form validation failed:', { newUsername: newUsername.trim(), currentUsername: userProfile?.username })
       return
     }
 
@@ -467,10 +387,8 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
     setSuccess('')
 
     try {
-      console.log('Attempting to update username for user:', user.id)
       
-      const data = await authService.updateUserProfile(user.id, newUsername)
-      console.log('Profile updated:', data)
+      await authService.updateUserProfile(user.id, newUsername)
 
       setSuccess('Username updated successfully!')
       onProfileUpdate() // Refresh profile data
@@ -488,178 +406,138 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
   }
 
   return (
-    <div style={{display: 'flex', flexDirection: 'column', height: '100vh'}}>
-      {/* Settings Header using LiftKit Card */}
-      <Card 
-        material="primary"
-        borderRadius="none"
-        shadow="md"
-      >
-        <Row padding="md" alignItems="center">
-          {/* Back button using LiftKit */}
+    <div className="flex flex-col h-screen">
+      {/* Settings Header */}
+      <Card className="rounded-none border-b bg-primary text-primary-foreground">
+        <CardContent className="flex items-center p-4">
+          {/* Back button */}
           <Button
-            variant="text"
-            color="on-primary"
-            label="← Back to Chat"
+            variant="ghost"
             onClick={onBack}
-            marginRight="md"
-          />
-          <Text fontClass="title1" color="on-primary" style={{flex: 1}}>
+            className="text-primary-foreground hover:bg-primary-foreground/20 mr-4"
+          >
+            ← Back to Chat
+          </Button>
+          <h1 className="text-xl font-semibold flex-1">
             Settings
-          </Text>
-        </Row>
+          </h1>
+        </CardContent>
       </Card>
 
       {/* Settings Content */}
-      <Container 
-        style={{flex: 1, overflowY: 'auto', width: '100%'}} 
-        maxWidth="2xl" 
-        padding="md"
-      >
-        <Card material="surface-container-high" padding="lg">
-          {/* Title using LiftKit Text */}
-          <Text fontClass="heading" marginBottom="lg">
-            Account Settings
-          </Text>
+      <ScrollArea className="flex-1">
+        <div className="max-w-2xl mx-auto p-6">
+          <Card>
+            <CardContent className="p-6">
+              {/* Title */}
+              <h2 className="text-2xl font-semibold mb-6">
+                Account Settings
+              </h2>
           
-          <form onSubmit={handleUpdateUsername}>
-            {/* Error/Success Messages */}
-            {error && (
-              <Card 
-                material="error-container"
-                padding="md"
-                marginBottom="md"
-                style={{borderLeft: '4px solid rgb(239 68 68)'}}
-              >
-                <Row alignItems="center" gap="sm">
-                  <span style={{fontSize: '1.25rem', color: 'rgb(220 38 38)'}}>❌</span>
-                  <Text fontClass="body" color="on-error-container" fontWeight="semibold">
+              <form onSubmit={handleUpdateUsername} className="space-y-4">
+                {/* Error/Success Messages */}
+                {error && (
+                  <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md border border-destructive/20 flex items-center">
+                    <span className="mr-2">❌</span>
                     {error}
-                  </Text>
-                </Row>
-              </Card>
-            )}
-            
-            {success && (
-              <Card 
-                material="success-container"
-                padding="md"
-                marginBottom="md"
-                style={{borderLeft: '4px solid rgb(34 197 94)'}}
-              >
-                <Row alignItems="center" gap="sm">
-                  <span style={{fontSize: '1.25rem', color: 'rgb(22 163 74)'}}>✅</span>
-                  <Text fontClass="body" color="on-success-container" fontWeight="semibold">
+                  </div>
+                )}
+                
+                {success && (
+                  <div className="bg-green-500/15 text-green-700 text-sm p-3 rounded-md border border-green-500/20 flex items-center">
+                    <span className="mr-2">✅</span>
                     {success}
-                  </Text>
-                </Row>
-              </Card>
-            )}
+                  </div>
+                )}
 
-            {/* Username Input using LiftKit */}
-            <div style={{marginBottom: '1.5rem'}}>
-              <TextInput
-                name="Username"
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-                helpText="Choose a unique username for your profile"
-                disabled={loading}
-                labelPosition="on-input"
-                endIcon="user"
-              />
-            </div>
+                {/* Username Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="username"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      disabled={loading}
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Choose a unique username for your profile</p>
+                </div>
 
-            {/* Update Button using LiftKit */}
-            <Button
-              type="submit"
-              variant="fill"
-              color={success ? "success" : "primary"}
-              label={
-                loading ? 'Updating...' : 
-                success ? '✅ Updated!' : 
-                'Update Username'
-              }
-              disabled={loading || !newUsername.trim() || newUsername === userProfile?.username}
-              size="lg"
-              style={{width: '100%'}}
-              onClick={handleUpdateUsername}
-            />
-          </form>
-
-          {/* Divider using LiftKit styling */}
-          <div style={{height: '1px', backgroundColor: 'var(--lk-outline)', margin: '1.5rem 0'}} />
-
-          {/* Install App Section */}
-          <Text fontClass="title1" marginBottom="md">
-            Progressive Web App
-          </Text>
-          <Card material="surface-container" padding="md" borderRadius="lg" marginBottom="lg">
-            <Row alignItems="center" justifyContent="space-between">
-              <div style={{flex: 1}}>
-                <Text fontClass="label" fontWeight="semibold" marginBottom="xs">
-                  Install as App
-                </Text>
-                <Text fontClass="body" color="on-surface-variant" marginBottom="sm">
-                  {isInstallable 
-                    ? /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent)
-                      ? "Install ClaudeChat as an app on your iOS device using Safari's Share menu"
-                      : "Install ClaudeChat on your device for a native app experience"
-                    : (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true
-                      ? "App is already installed"
-                      : "Install option will appear when available. Check browser console for debug info."
-                  }
-                </Text>
-              </div>
-              {isInstallable && (
+                {/* Update Button */}
                 <Button
-                  variant="fill"
-                  color="primary"
-                  label="Install App"
-                  onClick={handleInstallApp}
-                  size="md"
-                  style={{minWidth: '120px'}}
-                />
-              )}
-            </Row>
-          </Card>
+                  type="submit"
+                  disabled={loading || !newUsername.trim() || newUsername === userProfile?.username}
+                  className="w-full"
+                >
+                  {loading ? 'Updating...' : success ? '✅ Updated!' : 'Update Username'}
+                </Button>
+              </form>
 
-          {/* Divider using LiftKit styling */}
-          <div style={{height: '1px', backgroundColor: 'var(--lk-outline)', margin: '1.5rem 0'}} />
+              {/* Divider */}
+              <div className="h-px bg-border my-6" />
 
-          {/* Account Information using LiftKit components */}
-          <Text fontClass="title1" marginBottom="md">
-            Account Information
-          </Text>
-          <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-            <Card material="surface-container" padding="md" borderRadius="lg">
-              <Text fontClass="label" fontWeight="semibold" marginBottom="xs">
-                Email
-              </Text>
-              <Text fontClass="body" color="on-surface-variant">
-                {user.email}
-              </Text>
-            </Card>
-            <Card material="surface-container" padding="md" borderRadius="lg">
-              <Text fontClass="label" fontWeight="semibold" marginBottom="xs">
-                User ID
-              </Text>
-              <Text fontClass="body" color="on-surface-variant" style={{fontFamily: 'monospace', fontSize: '0.875rem'}}>
-                {user.id}
-              </Text>
-            </Card>
-            {userProfile && (
-              <Card material="surface-container" padding="md" borderRadius="lg">
-                <Text fontClass="label" fontWeight="semibold" marginBottom="xs">
-                  Current Username
-                </Text>
-                <Text fontClass="body" color="on-surface-variant">
-                  {userProfile.username}
-                </Text>
+              {/* Install App Section */}
+              <h3 className="text-lg font-semibold mb-4">
+                Progressive Web App
+              </h3>
+              <Card className="p-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="font-medium mb-1">
+                      Install as App
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {isInstallable 
+                        ? /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent)
+                          ? "Install ClaudeChat as an app on your iOS device using Safari's Share menu"
+                          : "Install ClaudeChat on your device for a native app experience"
+                        : (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true
+                          ? "App is already installed"
+                          : "Install option will appear when available."
+                      }
+                    </p>
+                  </div>
+                  {isInstallable && (
+                    <Button
+                      onClick={handleInstallApp}
+                      className="ml-4"
+                    >
+                      Install App
+                    </Button>
+                  )}
+                </div>
               </Card>
-            )}
-          </div>
-        </Card>
-      </Container>
+
+              {/* Divider */}
+              <div className="h-px bg-border my-6" />
+
+              {/* Account Information */}
+              <h3 className="text-lg font-semibold mb-4">
+                Account Information
+              </h3>
+              <div className="space-y-4">
+                <Card className="p-4">
+                  <p className="font-medium mb-1">Email</p>
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                </Card>
+                <Card className="p-4">
+                  <p className="font-medium mb-1">User ID</p>
+                  <p className="text-sm text-muted-foreground font-mono">{user.id}</p>
+                </Card>
+                {userProfile && (
+                  <Card className="p-4">
+                    <p className="font-medium mb-1">Current Username</p>
+                    <p className="text-sm text-muted-foreground">{userProfile.username}</p>
+                  </Card>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </ScrollArea>
     </div>
   )
 }
