@@ -3,7 +3,7 @@
   command = "npm install && npm run build"
   
   # Directory that contains the deploy-ready files
-  publish = "."
+  publish = "dist"
 
 [build.environment]
   # Node version for builds - use LTS version
