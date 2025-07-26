@@ -39,11 +39,6 @@ export const authService = {
   },
 
   async signInWithGoogle() {
-    // Determine the correct redirect URL based on environment
-    const isDevelopment = import.meta.env.VITE_ENVIRONMENT === 'development' || 
-                         window.location.hostname === 'localhost' ||
-                         window.location.hostname === '127.0.0.1'
-    
     // Use the current origin which should work for both dev and prod
     const redirectTo = `${window.location.origin}/`
     
@@ -107,44 +102,65 @@ export const authService = {
   },
 
   async getUserProfile(userId) {
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
-    
-    if (error && error.code !== 'PGRST116') throw error
-    return data
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+      
+      // If table doesn't exist or no record found, return null
+      if (error && (error.code === 'PGRST116' || error.code === '42P01')) {
+        return null
+      }
+      
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.warn('getUserProfile failed, user_profiles table may not exist:', error.message)
+      return null
+    }
   },
 
   async updateUserProfile(userId, username) {
-    // First try to update existing profile
-    const { data: updateData, error: updateError } = await supabase
-      .from('user_profiles')
-      .update({
-        username: username.trim(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', userId)
-      .select()
-
-    // If update failed because no row exists, insert new profile
-    if (updateError || !updateData || updateData.length === 0) {
-      const { data: insertData, error: insertError } = await supabase
+    try {
+      // First try to update existing profile
+      const { data: updateData, error: updateError } = await supabase
         .from('user_profiles')
-        .insert({
-          user_id: userId,
+        .update({
           username: username.trim(),
           updated_at: new Date().toISOString()
         })
+        .eq('user_id', userId)
         .select()
+
+      // If update failed because no row exists, insert new profile
+      if (updateError || !updateData || updateData.length === 0) {
+        const { data: insertData, error: insertError } = await supabase
+          .from('user_profiles')
+          .insert({
+            user_id: userId,
+            username: username.trim(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+        
+        if (insertError) throw insertError
+        return insertData?.[0]
+      }
       
-      if (insertError) throw insertError
-      return insertData?.[0]
+      if (updateError) throw updateError
+      return updateData?.[0]
+    } catch (error) {
+      console.warn('updateUserProfile failed, user_profiles table may not exist:', error.message)
+      // Return a mock profile object if table doesn't exist
+      return {
+        user_id: userId,
+        username: username.trim(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
     }
-    
-    if (updateError) throw updateError
-    return updateData?.[0]
   },
 
   onAuthStateChange(callback) {

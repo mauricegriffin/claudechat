@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { authService } from '../services/authService'
-// Import LiftKit components to replace Material UI
-// These components follow Material 3 design principles with golden ratio proportions
-import TextInput from '@/ui/components/text-input'
-import Button from '@/ui/components/button'
-import Card from '@/ui/components/card'
-import Container from '@/ui/components/container'
-import Text from '@/ui/components/text'
+// Import shadcn/ui components
+import { Button } from '../../../components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
+import { Input } from '../../../components/ui/input'
+import { Label } from '../../../components/ui/label'
+import { Globe, Mail, Lock, LogIn } from 'lucide-react'
 
 export default function Login({ onLogin }) {
   // State management for form fields and UI state
@@ -56,108 +55,96 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    // Container provides responsive max-width and centering
-    // LiftKit utility classes work similar to Tailwind but use golden ratio scale
-    <Container className="flex items-center justify-center min-h-screen p-6 bg-surface" style={{ maxWidth: '800px', margin: '0 auto' }}>
-      {/* Card creates a Material Design elevated surface */}
-      {/* 'material' prop sets the surface type following Material 3 guidelines */}
-      <Card 
-        material="surface-container-high" 
-        className="w-full max-w-md"
-        style={{ padding: '2rem' }}
-      >
-        {/* Text component handles typography with predefined scales */}
-        {/* fontClass uses LiftKit typography: heading, title1, body, label, caption */}
-        <Text 
-          fontClass="heading" 
-          className="text-center"
-          style={{ marginBottom: '2rem' }}
-        >
-          Sign in to your account
-        </Text>
+    <div className="flex items-center justify-center min-h-screen p-6">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-center text-2xl font-bold">
+            Sign in to your account
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
         
-        
-        {/* Google OAuth Button - Place it prominently at the top */}
-        {/* OAuth buttons typically appear first as they're often preferred */}
-        {/* Using LiftKit Button with golden ratio spacing */}
-        <div style={{ marginBottom: '1rem' }}>
+          {/* Google OAuth Button */}
           <Button
             onClick={handleGoogleLogin}
-            label="Continue with Google"
             variant="outline"
-            color="primary"
-            size="lg"
             disabled={loading}
             className="w-full"
-            startIcon="globe"
-          />
-        </div>
+          >
+            <Globe className="mr-2 h-4 w-4" />
+            Continue with Google
+          </Button>
 
-        {/* Divider with "or" text */}
-        <div className="flex items-center" style={{ margin: '1rem 0' }}>
-          <div className="flex-1 border-t border-outline"></div>
-          <Text fontClass="body" color="on-surface-variant" className="px-6">
-            or
-          </Text>
-          <div className="flex-1 border-t border-outline"></div>
-        </div>
+          {/* Divider with "or" text */}
+          <div className="flex items-center">
+            <div className="flex-1 border-t border-border"></div>
+            <span className="px-4 text-muted-foreground text-sm">or</span>
+            <div className="flex-1 border-t border-border"></div>
+          </div>
         
-        {/* Form with LiftKit spacing utilities */}
-        <form onSubmit={handleLogin} className="flex flex-col" style={{ gap: '1rem' }}>
-          {/* Error state display with semantic color tokens */}
-          {error && (
-            <div className="bg-error-container color-on-error-container rounded-lg" style={{ padding: '1rem', marginBottom: '1rem' }}>
-              <Text fontClass="body">{error}</Text>
+          <form onSubmit={handleLogin} className="space-y-4">
+            {/* Error state display */}
+            {error && (
+              <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md border border-destructive/20">
+                {error}
+              </div>
+            )}
+          
+            {/* Email input */}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoFocus
+                  autoComplete="email"
+                  className="pl-10"
+                />
+              </div>
             </div>
-          )}
           
-          {/* Email input with floating label */}
-          {/* TextInput supports two label positions: "default" and "on-input" (floating) */}
-          <TextInput
-            name="Email Address"
-            placeholder="your@email.com"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoFocus
-            labelPosition="on-input"
-            endIcon="mail"
-            autoComplete="email"
-            // Data attributes allow fine-grained component customization
-            data-lk-text-input-state={error ? 'error' : 'default'}
-          />
+            {/* Password input */}
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  className="pl-10"
+                />
+              </div>
+            </div>
           
-          {/* Password input with security features */}
-          <TextInput
-            name="Password"
-            placeholder="Enter your password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            labelPosition="on-input"
-            endIcon="lock"
-            autoComplete="current-password"
-          />
-          
-          {/* Submit button with loading state */}
-          {/* Button variants: "fill" (default), "outline", "text" */}
-          {/* Colors follow Material 3 color roles: primary, secondary, tertiary, error */}
-          <Button
-            type="submit"
-            label={loading ? 'Signing in...' : 'Sign in with Email'}
-            variant="fill"
-            color="primary"
-            size="lg"
-            disabled={loading}
-            className="w-full"
-            style={{ marginTop: '1rem' }}
-            // Start/end icons integrate with Lucide React icon set
-            startIcon={loading ? undefined : "log-in"}
-          />
-        </form>
+            {/* Submit button */}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full"
+            >
+              {loading ? (
+                'Signing in...'
+              ) : (
+                <>
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Sign in with Email
+                </>
+              )}
+            </Button>
+          </form>
+        </CardContent>
       </Card>
-    </Container>
+    </div>
   )
 }

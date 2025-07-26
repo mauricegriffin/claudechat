@@ -9,7 +9,7 @@ import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import { ScrollArea } from '../../../components/ui/scroll-area'
 import { Avatar, AvatarFallback } from '../../../components/ui/avatar'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../../../components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '../../../components/ui/sheet'
 import { 
   Menu, 
   Search, 
@@ -45,6 +45,11 @@ export default function Chat({ user, onLogout }) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showUserMenu])
+  
+  // Debug showSettings changes
+  useEffect(() => {
+    console.log('showSettings changed to:', showSettings);
+  }, [showSettings])
 
   // Fetch user profile from database
   const fetchUserProfile = useCallback(async () => {
@@ -165,9 +170,12 @@ export default function Chat({ user, onLogout }) {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-80">
+            <SheetContent side="left" className="w-80 bg-white dark:bg-gray-900">
               <SheetHeader>
                 <SheetTitle>Menu</SheetTitle>
+                <SheetDescription>
+                  Navigation and account options
+                </SheetDescription>
               </SheetHeader>
               <div className="mt-6 space-y-4">
                 {/* User info */}
@@ -192,8 +200,11 @@ export default function Chat({ user, onLogout }) {
                       e.preventDefault();
                       e.stopPropagation();
                       console.log('Settings button clicked');
-                      setShowSettings(true);
                       setShowUserMenu(false);
+                      // Use setTimeout to ensure Sheet closes before navigating
+                      setTimeout(() => {
+                        setShowSettings(true);
+                      }, 100);
                     }}
                   >
                     <Settings className="mr-2 h-4 w-4" />
@@ -206,6 +217,7 @@ export default function Chat({ user, onLogout }) {
                       e.preventDefault();
                       e.stopPropagation();
                       console.log('Logout button clicked');
+                      setShowUserMenu(false);
                       try {
                         await authService.signOut();
                         onLogout();

@@ -3,14 +3,9 @@ import { supabase } from './supabaseClient'
 import Login from './features/auth/components/Login'
 import Signup from './features/auth/components/Signup'
 import Chat from './features/chat/components/Chat'
-import UpdateNotification from './ui/components/UpdateNotification'
-// Import LiftKit components for layout and UI
-// LiftKit provides a complete design system based on Material 3 and golden ratio
-import Container from '@/ui/components/container'
-import Button from '@/ui/components/button'
-import Text from '@/ui/components/text'
-// Import LiftKit Theme components for color customization
-import ThemeProvider from '@/ui/components/theme'
+import UpdateNotification from './components/UpdateNotification'
+// Import shadcn/ui components
+import { Button } from './components/ui/button'
 
 function App() {
   // User authentication state
@@ -34,13 +29,12 @@ function App() {
     // This ensures the app updates when user logs in/out in another tab
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email)
         setUser(session?.user ?? null)
         setLoading(false)
         
         // Refresh session on token expiry to keep user logged in
         if (event === 'TOKEN_REFRESHED') {
-          console.log('Token refreshed successfully')
+          // Token refreshed successfully - no action needed
         }
       }
     )
@@ -62,74 +56,61 @@ function App() {
   }
 
   // Loading state while checking authentication
-  // LiftKit provides utility classes for common layout patterns
   if (loading) {
     return (
-      <ThemeProvider>
-        <div className="flex items-center justify-center min-h-screen bg-surface">
-          {/* Text component with typography scale */}
-          {/* color prop uses Material 3 color roles */}
-          <Text fontClass="body" color="on-surface-variant">
-            Loading...
-          </Text>
-        </div>
-      </ThemeProvider>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <p className="text-muted-foreground">
+          Loading...
+        </p>
+      </div>
     )
   }
 
   // Authenticated view - show chat interface
   if (user) {
     return (
-      <ThemeProvider>
+      <>
         <UpdateNotification />
         <Chat user={user} onLogout={handleLogout} />
-      </ThemeProvider>
+      </>
     )
   }
 
   // Authentication views - login or signup
   return (
-    <ThemeProvider>
-      <div className="min-h-screen bg-surface">
-        {authView === 'login' ? (
-          <div>
-            {/* Login component already uses LiftKit */}
-            <Login onLogin={handleLogin} />
-            
-            {/* Switch to signup link */}
-            {/* LiftKit utility classes for spacing and alignment */}
-            <div className="text-center mt-4 pb-8">
-              {/* Button with text variant for link-like appearance */}
-              {/* LiftKit buttons support three variants: fill, outline, text */}
-              <Button
-                onClick={() => setAuthView('signup')}
-                variant="text"
-                color="primary"
-                label="Don't have an account? Sign up"
-                // Text buttons often work well without explicit sizing
-                size="md"
-              />
-            </div>
+    <div className="min-h-screen bg-background">
+      {authView === 'login' ? (
+        <div>
+          <Login onLogin={handleLogin} />
+          
+          {/* Switch to signup link */}
+          <div className="text-center mt-4 pb-8">
+            <Button
+              onClick={() => setAuthView('signup')}
+              variant="ghost"
+              className="text-primary"
+            >
+              Don't have an account? Sign up
+            </Button>
           </div>
-        ) : (
-          <div>
-            {/* Signup component already uses LiftKit */}
-            <Signup onSignup={handleSignup} />
-            
-            {/* Switch to login link */}
-            <div className="text-center mt-4 pb-8">
-              <Button
-                onClick={() => setAuthView('login')}
-                variant="text"
-                color="primary"
-                label="Already have an account? Sign in"
-                size="md"
-              />
-            </div>
+        </div>
+      ) : (
+        <div>
+          <Signup onSignup={handleSignup} />
+          
+          {/* Switch to login link */}
+          <div className="text-center mt-4 pb-8">
+            <Button
+              onClick={() => setAuthView('login')}
+              variant="ghost"
+              className="text-primary"
+            >
+              Already have an account? Sign in
+            </Button>
           </div>
-        )}
-      </div>
-    </ThemeProvider>
+        </div>
+      )}
+    </div>
   )
 }
 

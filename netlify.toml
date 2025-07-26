@@ -20,19 +20,6 @@
   # Disable secrets scanning entirely for deployment
   SECRETS_SCAN_ENABLED = "false"
 
-# Specific redirects for PWA files to ensure they're served correctly
-[[redirects]]
-  from = "/manifest.json"
-  to = "/manifest.json"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/sw.js"
-  to = "/sw.js"
-  status = 200
-  force = true
-
 # SPA redirect rule - only redirect non-file requests to index.html
 # Static files (js, css, json, png, svg, etc.) should be served directly
 [[redirects]]
@@ -40,6 +27,8 @@
   to = "/index.html"
   status = 200
   # Only redirect if no file exists at the requested path
+  # This is important - it ensures static files like manifest.json and sw.js are served
+  conditions = {Role = ["public"]}
   force = false
 
 # Headers for better PWA support

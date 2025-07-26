@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { authService } from '../services/authService'
-// Import LiftKit components - these replace Material UI components
-// LiftKit uses golden ratio proportions and Material 3 design principles
-import TextInput from '@/ui/components/text-input'
-import Button from '@/ui/components/button'
-import Card from '@/ui/components/card'
-import Container from '@/ui/components/container'
-import Text from '@/ui/components/text'
+// Import shadcn/ui components
+import { Button } from '../../../components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
+import { Input } from '../../../components/ui/input'
+import { Label } from '../../../components/ui/label'
+import { Globe, Mail, Lock, User, UserPlus } from 'lucide-react'
 
 export default function Signup({ onSignup }) {
   // Form state management - each field has its own state
@@ -48,125 +47,121 @@ export default function Signup({ onSignup }) {
       // by the useEffect in App.jsx that listens to auth changes.
       
     } catch (error) {
-      console.error('Google signup error:', error)
       setError(error.message)
       setLoading(false)
     }
   }
 
   return (
-    // Container provides responsive max-width and centering
-    <Container className="flex items-center justify-center min-h-screen p-6" style={{ maxWidth: '800px', margin: '0 auto' }}>
-      {/* Card creates a Material Design elevated surface */}
-      <Card 
-        material="surface-container-high" 
-        className="w-full max-w-md"
-        style={{ padding: '2rem' }}
-      >
-        {/* Typography is handled by the Text component */}
-        {/* fontClass prop controls the typography scale (heading, title1, body, label, etc.) */}
-        <Text 
-          fontClass="heading" 
-          className="text-center"
-          style={{ marginBottom: '2rem' }}
-        >
-          Create your account
-        </Text>
+    <div className="flex items-center justify-center min-h-screen p-6">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-center text-2xl font-bold">
+            Create your account
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
         
-        {/* Google OAuth Button - Place it prominently at the top */}
-        {/* Using LiftKit Button with golden ratio spacing */}
-        <div style={{ marginBottom: '1rem' }}>
+          {/* Google OAuth Button */}
           <Button
             onClick={handleGoogleSignup}
-            label="Continue with Google"
             variant="outline"
-            color="primary"
-            size="lg"
             disabled={loading}
             className="w-full"
-            startIcon="globe"
-          />
-        </div>
+          >
+            <Globe className="mr-2 h-4 w-4" />
+            Continue with Google
+          </Button>
 
-        {/* Divider with "or" text */}
-        <div className="flex items-center" style={{ margin: '1rem 0' }}>
-          <div className="flex-1 border-t border-outline"></div>
-          <Text fontClass="body" color="on-surface-variant" className="px-6">
-            or
-          </Text>
-          <div className="flex-1 border-t border-outline"></div>
-        </div>
+          {/* Divider with "or" text */}
+          <div className="flex items-center">
+            <div className="flex-1 border-t border-border"></div>
+            <span className="px-4 text-muted-foreground text-sm">or</span>
+            <div className="flex-1 border-t border-border"></div>
+          </div>
         
-        {/* Form with LiftKit spacing utilities */}
-        <form onSubmit={handleSignup} className="flex flex-col" style={{ gap: '1rem' }}>
-          {/* Error message display */}
-          {error && (
-            <div className="bg-error-container color-on-error-container rounded-lg" style={{ padding: '1rem', marginBottom: '1rem' }}>
-              <Text fontClass="body">{error}</Text>
+          <form onSubmit={handleSignup} className="space-y-4">
+            {/* Error message display */}
+            {error && (
+              <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md border border-destructive/20">
+                {error}
+              </div>
+            )}
+          
+            {/* Username input field */}
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Choose a unique username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  autoFocus
+                  className="pl-10"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">This will be your display name</p>
             </div>
-          )}
           
-          {/* Username input field */}
-          {/* TextInput component from LiftKit with Material Design styling */}
-          {/* labelPosition can be "default" (above) or "on-input" (floating) */}
-          <TextInput
-            name="Username"
-            placeholder="Choose a unique username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            autoFocus
-            labelPosition="on-input"
-            helpText="This will be your display name"
-            endIcon="user"
-            // LiftKit uses data attributes for component configuration
-            data-lk-text-input-state={error ? 'error' : 'default'}
-          />
+            {/* Email input field */}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                  className="pl-10"
+                />
+              </div>
+            </div>
           
-          {/* Email input field */}
-          <TextInput
-            name="Email Address"
-            placeholder="your@email.com"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            labelPosition="on-input"
-            endIcon="mail"
-            autoComplete="email"
-          />
+            {/* Password input field */}
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Create a strong password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  className="pl-10"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Must be at least 6 characters</p>
+            </div>
           
-          {/* Password input field */}
-          <TextInput
-            name="Password"
-            placeholder="Create a strong password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            labelPosition="on-input"
-            endIcon="lock"
-            autoComplete="new-password"
-            helpText="Must be at least 6 characters"
-          />
-          
-          {/* Submit button */}
-          {/* Button component with different variants: fill, outline, text */}
-          {/* Size options: sm, md, lg */}
-          <Button
-            type="submit"
-            label={loading ? 'Creating account...' : 'Create account with Email'}
-            variant="fill"
-            color="primary"
-            size="lg"
-            disabled={loading}
-            className="w-full"
-            style={{ marginTop: '1rem' }}
-            // Icons can be added to buttons
-            startIcon={loading ? undefined : "user-plus"}
-          />
-        </form>
+            {/* Submit button */}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full"
+            >
+              {loading ? (
+                'Creating account...'
+              ) : (
+                <>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Create account with Email
+                </>
+              )}
+            </Button>
+          </form>
+        </CardContent>
       </Card>
-    </Container>
+    </div>
   )
 }
