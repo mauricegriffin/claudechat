@@ -1,7 +1,4 @@
 [build]
-  # Build from repository root (flattened structure)
-  base = ""
-  
   # Build command - standard Vite build
   command = "npm install && npm run build"
   
