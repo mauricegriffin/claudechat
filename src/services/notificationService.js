@@ -6,6 +6,7 @@ import { supabase } from '../supabaseClient'
  */
 export const sendMessageNotification = async (messageId, senderId) => {
   try {
+    console.log('Calling push notification Edge Function with:', { messageId, senderId })
     const { data, error } = await supabase.functions.invoke('send-push-notification', {
       body: {
         messageId,

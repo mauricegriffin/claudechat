@@ -87,7 +87,11 @@ export default function Chat({ user, onLogout }) {
             await subscribeToPush(user.id)
             console.log('Successfully subscribed to push notifications')
           } catch (error) {
-            console.error('Error auto-subscribing to push notifications:', error)
+            if (error.message.includes('VAPID keys')) {
+              console.log('Push notifications not configured yet (VAPID keys missing)')
+            } else {
+              console.error('Error auto-subscribing to push notifications:', error)
+            }
           }
         }
       }
@@ -212,7 +216,7 @@ export default function Chat({ user, onLogout }) {
     <div className="flex flex-col h-screen">
       {/* Fixed Navigation Bar */}
       <Card className="rounded-none border-b bg-red-900 text-white fixed top-0 left-0 right-0 z-50">
-        <CardContent className="flex items-center justify-between p-4">
+        <CardContent className="flex items-center justify-between px-4 py-2">
           {/* Hamburger menu button */}
           <Sheet open={showUserMenu} onOpenChange={setShowUserMenu}>
             <SheetTrigger asChild>

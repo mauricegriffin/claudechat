@@ -32,23 +32,27 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get message details with sender username
+    // Get message details
     const { data: message, error: messageError } = await supabase
       .from('messages')
-      .select(`
-        content,
-        user_profiles!inner(username)
-      `)
+      .select('content')
       .eq('id', messageId)
       .single()
 
     if (messageError || !message) {
       console.error('Error fetching message:', messageError)
       return new Response(
-        JSON.stringify({ error: 'Message not found' }),
+        JSON.stringify({ error: 'Message not found', details: messageError?.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
       )
     }
+    
+    // Get sender username separately
+    const { data: senderProfile } = await supabase
+      .from('user_profiles')
+      .select('username')
+      .eq('id', senderId)
+      .single()
 
     // Get all push subscriptions except for the sender
     const { data: subscriptions, error: subscriptionsError } = await supabase
@@ -91,7 +95,7 @@ serve(async (req) => {
     )
 
     // Prepare notification payload
-    const senderName = message.user_profiles?.username || 'Someone'
+    const senderName = senderProfile?.username || 'Someone'
     const messagePreview = message.content.length > 100 
       ? message.content.substring(0, 100) + '...' 
       : message.content
@@ -99,8 +103,8 @@ serve(async (req) => {
     const payload = JSON.stringify({
       title: `New message from ${senderName}`,
       body: messagePreview,
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/badge-72x72.png',
+      icon: '/icon-192x192.png',
+      badge: '/icon-192x192.png', // Use the same icon as badge since we don't have a separate badge
       tag: 'new-message',
       timestamp: Date.now(),
       data: { 

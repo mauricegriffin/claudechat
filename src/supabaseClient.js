@@ -1,30 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim()
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim()
+// Fix for masked environment variables in Netlify
+const rawUrl = import.meta.env.VITE_SUPABASE_URL?.trim()
+const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim()
 
-// Debug environment variables
-console.log('Environment check:', {
-  NODE_ENV: import.meta.env.NODE_ENV,
-  MODE: import.meta.env.MODE,
-  PROD: import.meta.env.PROD,
-  DEV: import.meta.env.DEV,
-  supabaseUrl: supabaseUrl,
-  supabaseUrlLength: supabaseUrl?.length,
-  supabaseUrlValid: supabaseUrl ? /^https?:\/\/.+/.test(supabaseUrl) : false,
-  supabaseAnonKey: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'MISSING',
-  allEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
-})
+// Check if values are masked (asterisks) and use fallback
+const supabaseUrl = (rawUrl && !rawUrl.includes('*')) ? rawUrl : 'https://ecjwszfrantxpvuzfvwl.supabase.co'
+const supabaseAnonKey = (rawKey && !rawKey.includes('*')) ? rawKey : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjandzemZyYW50eHB2dXpmdndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4OTkwNzAsImV4cCI6MjA2ODQ3NTA3MH0.lHcBb_UjUwQKpWxXgkHAN0g5_l0uDUNKmVvxxrrxQf8'
 
-// Test URL construction directly
-try {
-  if (supabaseUrl) {
-    new URL(supabaseUrl)
-    console.log('✅ URL construction test passed')
-  }
-} catch (error) {
-  console.error('❌ URL construction test failed:', error.message)
-  console.log('Raw URL chars:', Array.from(supabaseUrl || '').map((char, i) => `${i}: "${char}" (${char.charCodeAt(0)})`))
+// Debug info (can be removed once everything is working)
+if (rawUrl?.includes('*') || !rawUrl) {
+  console.log('🔧 Using fallback Supabase credentials due to masked environment variables')
 }
 
 if (!supabaseUrl || !supabaseAnonKey) {

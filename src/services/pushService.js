@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient'
 
 // VAPID public key - you'll need to replace this with your generated key
-const VAPID_PUBLIC_KEY = 'BM7PR_1-M0l1aq-VIcIruPYwKfbwuRtCXSiy4zFNBaWdd0wRTxgOGhXOC5eR6a31IQtYEndgh9EgUrqR28eOnu0'
+const VAPID_PUBLIC_KEY = 'BOssU1HLzbH6nXu3IjMKEjfba7SzShjBAXwDGZQOLJxQ6lHJNzvHGr35nhb0Tisc49NtgsbCpkeSAAbwE5d1HMs'
 
 /**
  * Convert VAPID public key from URL-safe base64 to Uint8Array
@@ -82,18 +82,81 @@ export const subscribeToPush = async (userId) => {
     
     if (!subscription) {
       // Create new subscription
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      })
+      console.log('Creating push subscription with VAPID key:', VAPID_PUBLIC_KEY.substring(0, 20) + '...')
+      console.log('Full VAPID key:', VAPID_PUBLIC_KEY)
+      
+      try {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        })
+        console.log('Push subscription created successfully:', subscription)
+        console.log('Subscription endpoint:', subscription.endpoint)
+        console.log('Subscription keys:', subscription.keys)
+        console.log('Full subscription object:', JSON.stringify(subscription, null, 2))
+        
+        // Try to get keys using different methods
+        const keys = subscription.keys || subscription.getKey || null
+        console.log('Keys extracted:', keys)
+        
+        if (subscription.getKey) {
+          try {
+            const p256dh = subscription.getKey('p256dh')
+            const auth = subscription.getKey('auth')
+            console.log('Keys via getKey method:', { p256dh, auth })
+          } catch (e) {
+            console.log('getKey method failed:', e)
+          }
+        }
+      } catch (subscribeError) {
+        console.error('Failed to create push subscription:', subscribeError)
+        throw new Error(`Push subscription failed: ${subscribeError.message}. This usually means the VAPID key is invalid or doesn't match the server configuration.`)
+      }
     }
+
+    // Extract keys using the proper method
+    let p256dh, auth
+    
+    if (subscription.keys) {
+      // Traditional method
+      p256dh = subscription.keys.p256dh
+      auth = subscription.keys.auth
+    } else if (subscription.getKey) {
+      // Modern method using getKey
+      try {
+        const p256dhBuffer = subscription.getKey('p256dh')
+        const authBuffer = subscription.getKey('auth')
+        
+        // Convert ArrayBuffer to base64
+        p256dh = btoa(String.fromCharCode(...new Uint8Array(p256dhBuffer)))
+        auth = btoa(String.fromCharCode(...new Uint8Array(authBuffer)))
+      } catch (e) {
+        console.error('Failed to extract keys using getKey:', e)
+        throw new Error('Could not extract subscription keys')
+      }
+    } else {
+      console.error('Invalid subscription object:', {
+        hasSubscription: !!subscription,
+        hasKeys: !!subscription?.keys,
+        hasGetKey: !!subscription?.getKey,
+        subscription: subscription
+      })
+      throw new Error('Invalid subscription: missing required keys. This usually means VAPID keys are not configured properly.')
+    }
+
+    // Validate we got the keys
+    if (!p256dh || !auth) {
+      throw new Error('Could not extract valid p256dh and auth keys from subscription')
+    }
+
+    console.log('Extracted keys successfully:', { p256dh: p256dh.substring(0, 20) + '...', auth: auth.substring(0, 20) + '...' })
 
     // Save subscription to database
     const subscriptionData = {
       user_id: userId,
       endpoint: subscription.endpoint,
-      p256dh: subscription.keys.p256dh,
-      auth: subscription.keys.auth,
+      p256dh: p256dh,
+      auth: auth,
       user_agent: navigator.userAgent
     }
 
