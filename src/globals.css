@@ -24,8 +24,8 @@
     --ring: 180 100% 40%; /* Teal */
     --radius: 0.5rem;
     
-    /* Custom orange for outgoing messages */
-    --message-outgoing: 25 85% 50%; /* Orange */
+    /* Custom dark red for outgoing messages */
+    --message-outgoing: 0 75% 10%; /* Very dark red */
     --message-outgoing-foreground: 0 0% 98%;
   }
 }
@@ -41,3 +41,12 @@
 }
 
 /* Chat application styles using shadcn/ui design tokens */
+
+/* Custom message bubble styles */
+.bg-message-outgoing {
+  background-color: hsl(var(--message-outgoing));
+}
+
+.text-message-outgoing-foreground {
+  color: hsl(var(--message-outgoing-foreground));
+}

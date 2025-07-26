@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { authService } from '../../auth/services/authService'
 import { messageService } from '../services/messageService'
+import { subscribeToPush, isPushSupported, getNotificationPermission } from '../../../services/pushService'
+import { sendMessageNotification } from '../../../services/notificationService'
 
 // Import shadcn/ui components
 import { Button } from '../../../components/ui/button'
@@ -28,8 +30,11 @@ export default function Chat({ user, onLogout }) {
   const [loading, setLoading] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [userProfile, setUserProfile] = useState(null)
-  // Menu state for user dropdown - simplified for LiftKit
+  // Menu state for user dropdown
   const [showUserMenu, setShowUserMenu] = useState(false)
+  // Push notification state
+  const [pushSupported, setPushSupported] = useState(false)
+  const [notificationPermission, setNotificationPermission] = useState('default')
   
   // Ref for scrolling to bottom of messages
   const messagesEndRef = useRef(null)
@@ -46,10 +51,6 @@ export default function Chat({ user, onLogout }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showUserMenu])
   
-  // Debug showSettings changes
-  useEffect(() => {
-    console.log('showSettings changed to:', showSettings);
-  }, [showSettings])
 
   // Fetch user profile from database
   const fetchUserProfile = useCallback(async () => {
@@ -67,6 +68,33 @@ export default function Chat({ user, onLogout }) {
   useEffect(() => {
     fetchUserProfile()
   }, [user, fetchUserProfile])
+
+  // Setup push notifications
+  useEffect(() => {
+    const setupPushNotifications = async () => {
+      // Check if push notifications are supported
+      const supported = isPushSupported()
+      setPushSupported(supported)
+      
+      if (supported) {
+        // Get current permission status
+        const permission = getNotificationPermission()
+        setNotificationPermission(permission)
+        
+        // Auto-subscribe if permission is already granted
+        if (permission === 'granted') {
+          try {
+            await subscribeToPush(user.id)
+            console.log('Successfully subscribed to push notifications')
+          } catch (error) {
+            console.error('Error auto-subscribing to push notifications:', error)
+          }
+        }
+      }
+    }
+
+    setupPushNotifications()
+  }, [user.id])
 
   // Fetch messages on component mount
   useEffect(() => {
@@ -122,8 +150,15 @@ export default function Chat({ user, onLogout }) {
     setLoading(true)
     
     try {
-      await messageService.sendMessage(newMessage.trim(), user.id)
+      const sentMessage = await messageService.sendMessage(newMessage.trim(), user.id)
       setNewMessage('')
+      
+      // Send push notification to other users (don't wait for it)
+      if (sentMessage?.id) {
+        sendMessageNotification(sentMessage.id, user.id).catch(error => {
+          console.warn('Push notification failed:', error)
+        })
+      }
     } catch (error) {
       console.error('Error sending message:', error)
     } finally {
@@ -136,6 +171,22 @@ export default function Chat({ user, onLogout }) {
   const handleBackToChat = () => {
     setShowSettings(false)
   }
+  
+  // Navigation handlers
+  const handleSettingsClick = () => {
+    setShowUserMenu(false)
+    setShowSettings(true)
+  }
+  
+  const handleLogoutClick = async () => {
+    setShowUserMenu(false)
+    try {
+      await authService.signOut()
+      onLogout()
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
 
   // Format message timestamp
   const formatTime = (timestamp) => {
@@ -146,7 +197,6 @@ export default function Chat({ user, onLogout }) {
   }
 
   // Settings page component
-  console.log('showSettings state:', showSettings);
   if (showSettings) {
     return (
       <SettingsPage 
@@ -193,42 +243,30 @@ export default function Chat({ user, onLogout }) {
                 
                 {/* Menu items */}
                 <div className="space-y-2">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={(e) => {
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="w-full flex items-center justify-start p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors cursor-pointer"
+                    onPointerDown={(e) => {
                       e.preventDefault();
-                      e.stopPropagation();
-                      console.log('Settings button clicked');
-                      setShowUserMenu(false);
-                      // Use setTimeout to ensure Sheet closes before navigating
-                      setTimeout(() => {
-                        setShowSettings(true);
-                      }, 100);
+                      handleSettingsClick();
                     }}
                   >
                     <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start text-destructive hover:text-destructive"
-                    onClick={async (e) => {
+                    <span>Settings</span>
+                  </div>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="w-full flex items-center justify-start p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 rounded-md transition-colors cursor-pointer"
+                    onPointerDown={(e) => {
                       e.preventDefault();
-                      e.stopPropagation();
-                      console.log('Logout button clicked');
-                      setShowUserMenu(false);
-                      try {
-                        await authService.signOut();
-                        onLogout();
-                      } catch (error) {
-                        console.error('Logout error:', error);
-                      }
+                      handleLogoutClick();
                     }}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                  </Button>
+                    <span>Logout</span>
+                  </div>
                 </div>
               </div>
             </SheetContent>
@@ -243,8 +281,8 @@ export default function Chat({ user, onLogout }) {
 
       {/* Main Chat Content - with top padding to account for fixed header */}
       <div className="flex flex-col h-full pt-16">
-        {/* Chat Messages Area - with bottom padding for fixed input */}
-        <ScrollArea className="flex-1 p-4 pb-20">
+        {/* Chat Messages Area - with padding for fixed header and input */}
+        <ScrollArea className="flex-1 px-4 py-8 pb-28">
           <div className="space-y-4">
             {messages.map((message) => {
               const isOwnMessage = message.user_id === user.id
@@ -254,7 +292,7 @@ export default function Chat({ user, onLogout }) {
                   className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-[75%] ${isOwnMessage ? 'order-2' : 'order-1'}`}>
-                    <Card className={`p-3 ${isOwnMessage ? 'bg-message-outgoing text-message-outgoing-foreground' : 'bg-muted'}`}>
+                    <Card className={`p-3 border-none ${isOwnMessage ? 'bg-message-outgoing text-message-outgoing-foreground' : 'bg-gray-900 text-white'}`}>
                       {/* Username for other users */}
                       {!isOwnMessage && (
                         <p className="text-xs font-semibold mb-1 text-primary">
@@ -328,6 +366,11 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
   const [isInstallable, setIsInstallable] = useState(false)
   
+  // Push notification settings
+  const [notificationPermission, setNotificationPermission] = useState(getNotificationPermission())
+  const [pushSupported, setPushSupported] = useState(isPushSupported())
+  const [notificationLoading, setNotificationLoading] = useState(false)
+  
   // Check if app is installable
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
@@ -386,6 +429,42 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
     setDeferredPrompt(null)
   }
   
+  // Handle push notification enable/disable
+  const handleToggleNotifications = async () => {
+    if (!pushSupported) {
+      setError('Push notifications are not supported on this device')
+      return
+    }
+
+    setNotificationLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      if (notificationPermission === 'granted') {
+        // User wants to disable notifications
+        const { unsubscribeFromPush } = await import('../../../services/pushService')
+        await unsubscribeFromPush(user.id)
+        setNotificationPermission('default')
+        setSuccess('Push notifications disabled')
+      } else {
+        // User wants to enable notifications
+        await subscribeToPush(user.id)
+        setNotificationPermission('granted')
+        setSuccess('Push notifications enabled successfully!')
+      }
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccess('')
+      }, 3000)
+    } catch (error) {
+      console.error('Error toggling notifications:', error)
+      setError(error.message || 'Failed to update notification settings')
+    } finally {
+      setNotificationLoading(false)
+    }
+  }
 
   const handleUpdateUsername = async (e) => {
     e.preventDefault()
@@ -487,6 +566,48 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
                   {loading ? 'Updating...' : success ? '✅ Updated!' : 'Update Username'}
                 </Button>
               </form>
+
+              {/* Divider */}
+              <div className="h-px bg-border my-6" />
+
+              {/* Push Notifications Section */}
+              <h3 className="text-lg font-semibold mb-4">
+                Push Notifications
+              </h3>
+              <Card className="p-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="font-medium mb-1">
+                      New Message Notifications
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {!pushSupported 
+                        ? "Push notifications are not supported on this device"
+                        : notificationPermission === 'granted'
+                          ? "You'll receive notifications for new messages"
+                          : notificationPermission === 'denied'
+                            ? "Notifications are blocked. Enable them in your browser settings"
+                            : "Enable notifications to get alerts for new messages"
+                      }
+                    </p>
+                  </div>
+                  {pushSupported && notificationPermission !== 'denied' && (
+                    <Button
+                      onClick={handleToggleNotifications}
+                      disabled={notificationLoading}
+                      variant={notificationPermission === 'granted' ? 'destructive' : 'default'}
+                      className="ml-4"
+                    >
+                      {notificationLoading 
+                        ? 'Loading...' 
+                        : notificationPermission === 'granted' 
+                          ? 'Disable' 
+                          : 'Enable'
+                      }
+                    </Button>
+                  )}
+                </div>
+              </Card>
 
               {/* Divider */}
               <div className="h-px bg-border my-6" />
