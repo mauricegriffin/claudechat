@@ -214,8 +214,8 @@ export default function Chat({ user, onLogout }) {
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Fixed Navigation Bar with iOS safe area support */}
-      <Card className="rounded-none border-b bg-red-900 text-white fixed top-0 left-0 right-0 z-50 p-1 safe-top">
+      {/* Fixed Navigation Bar */}
+      <Card className="rounded-none border-b bg-red-900 text-white fixed top-0 left-0 right-0 z-50 p-1">
         <CardContent className="flex items-center justify-between px-4 py-0">
           {/* Hamburger menu button */}
           <Sheet open={showUserMenu} onOpenChange={setShowUserMenu}>
@@ -283,10 +283,10 @@ export default function Chat({ user, onLogout }) {
         </CardContent>
       </Card>
 
-      {/* Main Chat Content - with top padding to account for fixed header and safe area */}
-      <div className="flex flex-col h-full" style={{ paddingTop: 'calc(4rem + env(safe-area-inset-top))' }}>
+      {/* Main Chat Content - with top padding to account for fixed header */}
+      <div className="flex flex-col h-full pt-16">
         {/* Chat Messages Area - with padding for fixed header and input */}
-        <ScrollArea className="flex-1 px-4 py-10" style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}>
+        <ScrollArea className="flex-1 px-4 py-10 pb-28">
           <div className="space-y-4">
             {messages.map((message) => {
               const isOwnMessage = message.user_id === user.id
@@ -322,8 +322,8 @@ export default function Chat({ user, onLogout }) {
           </div>
         </ScrollArea>
 
-        {/* Message Input Area - Fixed to bottom with iOS safe area support */}
-        <Card className="rounded-none border-t bg-red-900 text-white fixed bottom-0 left-0 right-0 z-40 safe-bottom">
+        {/* Message Input Area - Fixed to bottom */}
+        <Card className="rounded-none border-t bg-red-900 text-white fixed bottom-0 left-0 right-0 z-40">
           <CardContent className="p-4 py-1">
             <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
               {/* Message input field */}
