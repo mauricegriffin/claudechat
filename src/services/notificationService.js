@@ -7,6 +7,19 @@ import { supabase } from '../supabaseClient'
 export const sendMessageNotification = async (messageId, senderId) => {
   try {
     console.log('Calling push notification Edge Function with:', { messageId, senderId })
+    
+    // Test with early return first
+    if (messageId === 'test-early-return') {
+      const { data, error } = await supabase.functions.invoke('send-push-notification', {
+        body: {
+          messageId: 'test-early-return',
+          senderId
+        }
+      })
+      console.log('Early return test result:', { data, error })
+      return data
+    }
+    
     const { data, error } = await supabase.functions.invoke('send-push-notification', {
       body: {
         messageId,
@@ -25,6 +38,21 @@ export const sendMessageNotification = async (messageId, senderId) => {
     console.error('Failed to send push notification:', error)
     // Don't throw here - we don't want message sending to fail because of notification issues
     return null
+  }
+}
+
+/**
+ * Test Edge Function connectivity (for debugging)
+ */
+export const testEdgeFunction = async () => {
+  try {
+    console.log('Testing Edge Function connectivity...')
+    const result = await sendMessageNotification('test-early-return', 'test-sender')
+    console.log('Edge Function test result:', result)
+    return result
+  } catch (error) {
+    console.error('Edge Function test failed:', error)
+    throw error
   }
 }
 
@@ -55,5 +83,6 @@ export const sendTestNotification = async (userId) => {
 
 export default {
   sendMessageNotification,
-  sendTestNotification
+  sendTestNotification,
+  testEdgeFunction
 }

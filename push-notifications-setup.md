@@ -41,7 +41,7 @@ With your actual VAPID public key.
 supabase login
 
 # Link to your project
-supabase link --project-ref YOUR_PROJECT_REF
+supabase link --project-ref ecjwszfrantxpvuzfvwl
 
 # Deploy the edge function
 supabase functions deploy send-push-notification

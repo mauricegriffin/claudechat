@@ -25,11 +25,26 @@ function urlBase64ToUint8Array(base64String) {
  * Check if push notifications are supported
  */
 export const isPushSupported = () => {
-  return (
+  // Check basic support
+  const basicSupport = (
     'serviceWorker' in navigator &&
     'PushManager' in window &&
     'Notification' in window
   )
+  
+  if (!basicSupport) return false
+  
+  // Check if running as iOS PWA
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+  const isStandalone = window.navigator.standalone === true
+  
+  // iOS Safari supports push only in PWA mode (iOS 16.4+)
+  if (isIOS && !isStandalone) {
+    console.log('Push notifications require installing the app on iOS')
+    return false
+  }
+  
+  return true
 }
 
 /**

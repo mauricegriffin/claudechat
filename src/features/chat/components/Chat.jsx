@@ -215,8 +215,8 @@ export default function Chat({ user, onLogout }) {
   return (
     <div className="flex flex-col h-screen">
       {/* Fixed Navigation Bar */}
-      <Card className="rounded-none border-b bg-red-900 text-white fixed top-0 left-0 right-0 z-50">
-        <CardContent className="flex items-center justify-between px-4 py-2">
+      <Card className="rounded-none border-b bg-red-900 text-white fixed top-0 left-0 right-0 z-50 p-1">
+        <CardContent className="flex items-center justify-between px-4 py-0">
           {/* Hamburger menu button */}
           <Sheet open={showUserMenu} onOpenChange={setShowUserMenu}>
             <SheetTrigger asChild>
@@ -286,7 +286,7 @@ export default function Chat({ user, onLogout }) {
       {/* Main Chat Content - with top padding to account for fixed header */}
       <div className="flex flex-col h-full pt-16">
         {/* Chat Messages Area - with padding for fixed header and input */}
-        <ScrollArea className="flex-1 px-4 py-8 pb-28">
+        <ScrollArea className="flex-1 px-4 py-10 pb-28">
           <div className="space-y-4">
             {messages.map((message) => {
               const isOwnMessage = message.user_id === user.id
@@ -324,7 +324,7 @@ export default function Chat({ user, onLogout }) {
 
         {/* Message Input Area - Fixed to bottom */}
         <Card className="rounded-none border-t bg-red-900 text-white fixed bottom-0 left-0 right-0 z-40">
-          <CardContent className="p-4">
+          <CardContent className="p-4 py-1">
             <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
               {/* Message input field */}
               <div className="flex-1 relative">
@@ -335,7 +335,7 @@ export default function Chat({ user, onLogout }) {
                   disabled={loading}
                   className="pr-10 bg-black text-white placeholder:text-gray-400"
                 />
-                <MessageCircle className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                {/* <MessageCircle className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" /> */}
               </div>
               
               {/* Send button */}
@@ -435,6 +435,15 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
   
   // Handle push notification enable/disable
   const handleToggleNotifications = async () => {
+    // Check if iOS and not in standalone mode
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+    const isStandalone = window.navigator.standalone === true
+    
+    if (isIOS && !isStandalone) {
+      setError('On iOS, install the app first: tap Share → Add to Home Screen')
+      return
+    }
+    
     if (!pushSupported) {
       setError('Push notifications are not supported on this device')
       return

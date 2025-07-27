@@ -16,8 +16,43 @@ serve(async (req) => {
   }
 
   try {
+    // Log headers for debugging
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()))
+    
     // Parse request body
     const { messageId, senderId } = await req.json()
+    console.log('Request body:', { messageId, senderId })
+    
+    // Check environment variables first
+    const envCheck = {
+      SUPABASE_URL: !!Deno.env.get('SUPABASE_URL'),
+      SUPABASE_SERVICE_ROLE_KEY: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+      VAPID_PUBLIC_KEY: !!Deno.env.get('VAPID_PUBLIC_KEY'),
+      VAPID_PRIVATE_KEY: !!Deno.env.get('VAPID_PRIVATE_KEY'),
+      VAPID_EMAIL: !!Deno.env.get('VAPID_EMAIL')
+    }
+    console.log('Environment variables check:', envCheck)
+    
+    // Return environment status for debugging
+    if (messageId === 'env-check') {
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Environment check', 
+          env: envCheck,
+          vapidKeyStart: Deno.env.get('VAPID_PUBLIC_KEY')?.substring(0, 20)
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Early test - return success immediately to test if we can reach this point
+    if (messageId === 'test-early-return') {
+      return new Response(
+        JSON.stringify({ success: true, message: 'Early return test successful' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
     
     if (!messageId || !senderId) {
       return new Response(
@@ -27,10 +62,25 @@ serve(async (req) => {
     }
 
     // Initialize Supabase client with service role key
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    console.log('Initializing Supabase client...')
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    
+    console.log('Environment check:', {
+      hasUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey,
+      urlStart: supabaseUrl?.substring(0, 30)
+    })
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase environment variables')
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Get message details
     const { data: message, error: messageError } = await supabase
@@ -79,6 +129,13 @@ serve(async (req) => {
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')
     const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')
     const vapidEmail = Deno.env.get('VAPID_EMAIL') || 'noreply@claudechat.com'
+
+    console.log('VAPID configuration:', {
+      hasPublicKey: !!vapidPublicKey,
+      hasPrivateKey: !!vapidPrivateKey,
+      publicKeyStart: vapidPublicKey?.substring(0, 20),
+      email: vapidEmail
+    })
 
     if (!vapidPublicKey || !vapidPrivateKey) {
       console.error('VAPID keys not configured')
