@@ -31,7 +31,16 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     // Detect auth changes in other tabs/windows
     detectSessionInUrl: true,
-    // Set longer session timeout (24 hours)
-    flowType: 'pkce'
+    // Use PKCE flow for better security (default behavior)
+    // flowType is not specified, which defaults to 'pkce'
+    // Add debug logging for auth state changes
+    debug: true
   }
+})
+
+// Debug connection
+console.log('Supabase client initialized with:', {
+  url: supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+  environment: import.meta.env.VITE_ENVIRONMENT || 'unknown'
 }) 

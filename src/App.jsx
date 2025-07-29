@@ -29,12 +29,23 @@ function App() {
     // This ensures the app updates when user logs in/out in another tab
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.id)
         setUser(session?.user ?? null)
         setLoading(false)
         
+        // Handle OAuth success
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('User signed in successfully:', session.user.email)
+        }
+        
+        // Handle OAuth errors
+        if (event === 'SIGNED_OUT') {
+          console.log('User signed out')
+        }
+        
         // Refresh session on token expiry to keep user logged in
         if (event === 'TOKEN_REFRESHED') {
-          // Token refreshed successfully - no action needed
+          console.log('Token refreshed successfully')
         }
       }
     )

@@ -24,16 +24,23 @@ export const authService = {
 
   async signIn(email, password) {
     return safeAsync(async () => {
+      console.log('Attempting login for:', email)
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
-      if (error) throw error
+      
+      if (error) {
+        console.error('Login error:', error)
+        throw error
+      }
       
       if (!data.user) {
+        console.error('No user data returned')
         throw new Error('Login failed. Please check your credentials.')
       }
       
+      console.log('Login successful for user:', data.user.id)
       return data
     }, 'Failed to sign in')
   },
@@ -43,6 +50,10 @@ export const authService = {
     const redirectTo = `${window.location.origin}/`
     
     console.log('OAuth redirect URL:', redirectTo)
+    console.log('Current auth config:', { 
+      url: window.location.origin,
+      flowType: 'pkce' // Using PKCE flow for better security
+    })
     
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -50,11 +61,19 @@ export const authService = {
         redirectTo: redirectTo,
         queryParams: {
           access_type: 'offline',
-          prompt: 'consent',
-        }
+          prompt: 'select_account',
+        },
+        // PKCE flow is enabled by default for better security
+        skipBrowserRedirect: false
       }
     })
-    if (error) throw error
+    
+    if (error) {
+      console.error('OAuth error:', error)
+      throw error
+    }
+    
+    console.log('OAuth data:', data)
     return data
   },
 

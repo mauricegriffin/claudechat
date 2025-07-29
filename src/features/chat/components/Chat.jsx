@@ -106,8 +106,10 @@ export default function Chat({ user, onLogout }) {
     
     // Subscribe to real-time messages
     const channel = messageService.subscribeToMessages((payload) => {
+      console.log('Real-time payload received:', payload)
       if (payload.type === 'INSERT' || payload.eventType === 'INSERT') {
         // Fetch the new message with username
+        console.log('Fetching new message:', payload.new.id)
         fetchNewMessage(payload.new.id)
       }
     })
@@ -140,10 +142,21 @@ export default function Chat({ user, onLogout }) {
 
   const fetchMessages = async () => {
     try {
+      console.log('Fetching messages...')
       const data = await messageService.fetchMessagesWithUsername()
+      console.log('Messages fetched:', data)
       setMessages(data)
     } catch (error) {
       console.error('Error fetching messages:', error)
+      // Try fallback to basic messages table if view fails
+      try {
+        console.log('Trying fallback to basic messages...')
+        const fallbackData = await messageService.fetchMessages()
+        console.log('Fallback messages:', fallbackData)
+        setMessages(fallbackData)
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError)
+      }
     }
   }
 
@@ -154,7 +167,9 @@ export default function Chat({ user, onLogout }) {
     setLoading(true)
     
     try {
+      console.log('Sending message:', newMessage.trim(), 'for user:', user.id)
       const sentMessage = await messageService.sendMessage(newMessage.trim(), user.id)
+      console.log('Message sent successfully:', sentMessage)
       setNewMessage('')
       
       // Send push notification to other users (don't wait for it)
@@ -165,6 +180,7 @@ export default function Chat({ user, onLogout }) {
       }
     } catch (error) {
       console.error('Error sending message:', error)
+      alert('Failed to send message: ' + error.message)
     } finally {
       setLoading(false)
     }

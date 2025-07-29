@@ -17,6 +17,25 @@
   # Disable secrets scanning entirely for deployment
   SECRETS_SCAN_ENABLED = "false"
 
+# Serve static files directly (no redirect)
+[[redirects]]
+  from = "/sw.js"
+  to = "/sw.js"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/manifest.json"
+  to = "/manifest.json"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/icon-*.png"
+  to = "/icon-:splat.png"
+  status = 200
+  force = true
+
 # SPA redirect rule - redirect all non-file requests to index.html
 [[redirects]]
   from = "/*"
