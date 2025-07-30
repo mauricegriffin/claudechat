@@ -163,4 +163,3 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   window.typingService = typingService
   console.log('🛠️ Typing service available: window.typingService')
 }
-}
