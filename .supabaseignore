@@ -1,0 +1,26 @@
+# Supabase CLI ignore file
+# Prevents accidental overwrites of production settings
+
+# Never sync local env files to remote
+.env
+.env.*
+.env.local
+.env.production
+
+# Ignore local development files
+*.local
+*.backup
+backup-*.sql
+
+# Ignore IDE and system files
+.vscode/
+.idea/
+.DS_Store
+
+# Ignore local test data
+test-data/
+seed-data/
+
+# Keep local configs separate
+config.local.toml
+supabase.local.json

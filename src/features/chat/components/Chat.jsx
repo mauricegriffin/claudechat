@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { authService } from '../../auth/services/authService'
 import { messageService } from '../services/messageService'
+import { typingService } from '../services/typingService'
 import { subscribeToPush, isPushSupported, getNotificationPermission } from '../../../services/pushService'
 import { sendMessageNotification } from '../../../services/notificationService'
 
@@ -35,6 +36,8 @@ export default function Chat({ user, onLogout }) {
   // Push notification state
   const [pushSupported, setPushSupported] = useState(false)
   const [notificationPermission, setNotificationPermission] = useState('default')
+  // Typing indicators state
+  const [typingUsers, setTypingUsers] = useState([])
   
   // Ref for scrolling to bottom of messages
   const messagesEndRef = useRef(null)
@@ -105,7 +108,7 @@ export default function Chat({ user, onLogout }) {
     fetchMessages()
     
     // Subscribe to real-time messages
-    const channel = messageService.subscribeToMessages((payload) => {
+    const messageChannel = messageService.subscribeToMessages((payload) => {
       console.log('Real-time payload received:', payload)
       if (payload.type === 'INSERT' || payload.eventType === 'INSERT') {
         // Fetch the new message with username
@@ -114,10 +117,29 @@ export default function Chat({ user, onLogout }) {
       }
     })
 
+    // Subscribe to typing indicators
+    const typingChannel = typingService.subscribeToTypingIndicators(async (payload) => {
+      console.log('Typing indicator payload:', payload)
+      // Refresh typing users list
+      const typingData = await typingService.getTypingUsers()
+      // Filter out current user from typing list
+      const otherTypingUsers = typingData.filter(u => u.user_id !== user.id)
+      setTypingUsers(otherTypingUsers)
+    })
+
+    // Get initial typing users
+    typingService.getTypingUsers().then(data => {
+      const otherTypingUsers = data.filter(u => u.user_id !== user.id)
+      setTypingUsers(otherTypingUsers)
+    })
+
     return () => {
-      channel.unsubscribe()
+      messageChannel.unsubscribe()
+      typingChannel.unsubscribe()
+      // Clean up typing status when component unmounts
+      typingService.cleanup(user.id)
     }
-  }, [])
+  }, [user.id])
 
   // Fetch a single new message with username
   const fetchNewMessage = async (messageId) => {
@@ -171,6 +193,9 @@ export default function Chat({ user, onLogout }) {
       const sentMessage = await messageService.sendMessage(newMessage.trim(), user.id)
       console.log('Message sent successfully:', sentMessage)
       setNewMessage('')
+      
+      // Stop typing indicator when message is sent
+      typingService.stopTyping(user.id)
       
       // Send push notification to other users (don't wait for it)
       if (sentMessage?.id) {
@@ -338,6 +363,22 @@ export default function Chat({ user, onLogout }) {
           </div>
         </ScrollArea>
 
+        {/* Typing Indicators */}
+        {typingUsers.length > 0 && (
+          <div className="fixed bottom-20 left-4 right-4 z-30">
+            <Card className="bg-gray-100 dark:bg-gray-800 border-none shadow-sm p-2">
+              <p className="text-xs text-muted-foreground italic">
+                {typingUsers.length === 1 
+                  ? `${typingUsers[0].username || 'Someone'} is typing...`
+                  : typingUsers.length === 2
+                  ? `${typingUsers[0].username || 'Someone'} and ${typingUsers[1].username || 'someone'} are typing...`
+                  : `${typingUsers[0].username || 'Someone'} and ${typingUsers.length - 1} others are typing...`
+                }
+              </p>
+            </Card>
+          </div>
+        )}
+
         {/* Message Input Area - Fixed to bottom */}
         <Card className="rounded-none border-t bg-red-900 text-white fixed bottom-0 left-0 right-0 z-40">
           <CardContent className="p-4 py-1">
@@ -347,7 +388,17 @@ export default function Chat({ user, onLogout }) {
                 <Input
                   placeholder="Type a message..."
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value)
+                    // Trigger typing indicator
+                    if (e.target.value.trim()) {
+                      typingService.startTyping(user.id)
+                    }
+                  }}
+                  onBlur={() => {
+                    // Stop typing when user leaves input field
+                    typingService.stopTyping(user.id)
+                  }}
                   disabled={loading}
                   className="pr-10 bg-black text-white placeholder:text-gray-400"
                 />
@@ -388,7 +439,7 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
   
   // Push notification settings
   const [notificationPermission, setNotificationPermission] = useState(getNotificationPermission())
-  const [pushSupported, setPushSupported] = useState(isPushSupported())
+  const [pushSupported] = useState(isPushSupported())
   const [notificationLoading, setNotificationLoading] = useState(false)
   
   // Check if app is installable
