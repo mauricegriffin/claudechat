@@ -492,23 +492,39 @@ export default function Chat({ user, onLogout }) {
           </div>
         </ScrollArea>
 
-        {/* Typing Indicators - Position above the input footer */}
+        {/* Typing Indicators - Subtle dots animation */}
         {(typingUsers.length > 0 || import.meta.env.DEV) && (
           <div className="fixed bottom-20 left-4 right-4 z-50 pointer-events-none">
-            <Card className="bg-yellow-100 dark:bg-yellow-900/80 border-yellow-300 dark:border-yellow-700 shadow-lg p-3 animate-pulse">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200 italic font-medium">
-                {typingUsers.length > 0 
-                  ? typingUsers.length === 1 
-                    ? `${typingUsers[0].username || 'Someone'} is typing...`
-                    : typingUsers.length === 2
-                    ? `${typingUsers[0].username || 'Someone'} and ${typingUsers[1].username || 'someone'} are typing...`
-                    : `${typingUsers[0].username || 'Someone'} and ${typingUsers.length - 1} others are typing...`
-                  : import.meta.env.DEV 
-                    ? `💻 DEV: Typing indicator test (${typingUsers.length} users)`
-                    : ''
-                }
-              </p>
-            </Card>
+            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full px-4 py-2 shadow-sm border border-gray-200 dark:border-gray-700 w-fit">
+              <div className="flex items-center space-x-2">
+                {typingUsers.length > 0 ? (
+                  <>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      {typingUsers.length === 1 
+                        ? typingUsers[0].username || 'Someone'
+                        : typingUsers.length === 2
+                        ? `${typingUsers[0].username || 'Someone'} and ${typingUsers[1].username || 'someone'}`
+                        : `${typingUsers[0].username || 'Someone'} and ${typingUsers.length - 1} others`
+                      }
+                    </span>
+                    <div className="flex space-x-1">
+                      <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                      <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                      <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                    </div>
+                  </>
+                ) : import.meta.env.DEV ? (
+                  <>
+                    <span className="text-xs text-gray-500">DEV: Typing test</span>
+                    <div className="flex space-x-1">
+                      <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                      <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                      <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </div>
           </div>
         )}
 
