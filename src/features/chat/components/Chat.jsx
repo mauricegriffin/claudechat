@@ -219,7 +219,7 @@ export default function Chat({ user, onLogout }) {
   // Memoized callback for typing indicator updates
   const handleTypingUpdate = useCallback(async (payload) => {
     if (import.meta.env.DEV) {
-      console.log('Typing indicator payload:', payload)
+      console.log('🔔 Typing indicator payload received:', payload)
     }
     
     try {
@@ -230,13 +230,14 @@ export default function Chat({ user, onLogout }) {
       const typingData = await typingService.getTypingUsers()
       const otherTypingUsers = typingData.filter(u => u.user_id !== user.id)
       
-      if (import.meta.env.DEV) {
-        console.log('Typing users updated:', otherTypingUsers)
-      }
+      console.log(`👥 Current user: ${user.id}`)
+      console.log(`📝 All typing users:`, typingData)
+      console.log(`🎯 Other typing users:`, otherTypingUsers)
+      console.log(`📊 Typing users count: ${otherTypingUsers.length}`)
       
       setTypingUsers(otherTypingUsers)
     } catch (error) {
-      console.error('Error updating typing users:', error)
+      console.error('❌ Error updating typing users:', error)
     }
   }, [user.id])
 

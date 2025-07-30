@@ -61,13 +61,17 @@ export const typingService = {
   // Fetch current typing users
   async getTypingUsers() {
     try {
+      if (import.meta.env.DEV) {
+        console.log('🔍 Fetching typing users...')
+      }
+      
       // Try the view first
       const { data, error } = await supabase
         .from('typing_indicators_with_username')
         .select('*')
       
       if (error) {
-        console.warn('View query failed, trying direct table query:', error)
+        console.warn('⚠️ View query failed, trying direct table query:', error)
         
         // Fallback to direct table query with join
         const { data: fallbackData, error: fallbackError } = await supabase
@@ -86,15 +90,25 @@ export const typingService = {
         if (fallbackError) throw fallbackError
         
         // Transform the data to match expected format
-        return (fallbackData || []).map(item => ({
+        const transformedData = (fallbackData || []).map(item => ({
           ...item,
           username: item.user_profiles?.username || 'Unknown User'
         }))
+        
+        if (import.meta.env.DEV) {
+          console.log('📋 Fallback typing users found:', transformedData)
+        }
+        
+        return transformedData
+      }
+      
+      if (import.meta.env.DEV) {
+        console.log('📋 View typing users found:', data)
       }
       
       return data || []
     } catch (error) {
-      console.error('Error fetching typing users:', error)
+      console.error('❌ Error fetching typing users:', error)
       return []
     }
   },
@@ -125,5 +139,28 @@ export const typingService = {
     }
     // Mark user as not typing when they leave
     this.stopTyping(userId)
+  },
+
+  // Debug helper - manually test typing indicators
+  async debugTyping(userId) {
+    console.log('🧪 Testing typing indicators for user:', userId)
+    await this.startTyping(userId)
+    
+    setTimeout(async () => {
+      const users = await this.getTypingUsers()
+      console.log('🧪 Debug: Current typing users:', users)
+    }, 1000)
+    
+    setTimeout(async () => {
+      await this.stopTyping(userId)
+      console.log('🧪 Stopped typing test for user:', userId)
+    }, 5000)
   }
+}
+
+// Debug helper in development
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  window.typingService = typingService
+  console.log('🛠️ Typing service available: window.typingService')
+}
 }
