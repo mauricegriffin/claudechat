@@ -4,6 +4,7 @@ import { messageService } from '../services/messageService'
 import { typingService } from '../services/typingService'
 import { subscribeToPush, isPushSupported, getNotificationPermission } from '../../../services/pushService'
 import { sendMessageNotification } from '../../../services/notificationService'
+import { performanceMonitor, measure } from '../../../lib/performance'
 
 // Import shadcn/ui components
 import { Button } from '../../../components/ui/button'
@@ -34,8 +35,8 @@ export default function Chat({ user, onLogout }) {
   // Menu state for user dropdown
   const [showUserMenu, setShowUserMenu] = useState(false)
   // Push notification state
-  const [pushSupported, setPushSupported] = useState(false)
-  const [notificationPermission, setNotificationPermission] = useState('default')
+  const [_pushSupported, setPushSupported] = useState(false)
+  const [_notificationPermission, setNotificationPermission] = useState('default')
   // Typing indicators state
   const [typingUsers, setTypingUsers] = useState([])
   
@@ -103,84 +104,212 @@ export default function Chat({ user, onLogout }) {
     setupPushNotifications()
   }, [user.id])
 
-  // Fetch messages on component mount
-  useEffect(() => {
-    fetchMessages()
-    
-    // Subscribe to real-time messages
-    const messageChannel = messageService.subscribeToMessages((payload) => {
-      console.log('Real-time payload received:', payload)
-      if (payload.type === 'INSERT' || payload.eventType === 'INSERT') {
-        // Fetch the new message with username
-        console.log('Fetching new message:', payload.new.id)
-        fetchNewMessage(payload.new.id)
+  // State to prevent multiple simultaneous fetches
+  const [isFetchingMessages, setIsFetchingMessages] = useState(false)
+
+  // Optimized message fetching with performance tracking (moved up to avoid hoisting issues)
+  const fetchMessages = useCallback(async () => {
+    // Prevent multiple simultaneous fetches
+    if (isFetchingMessages) {
+      if (import.meta.env.DEV) {
+        console.log('Skipping message fetch - already in progress')
       }
-    })
-
-    // Subscribe to typing indicators
-    const typingChannel = typingService.subscribeToTypingIndicators(async (payload) => {
-      console.log('Typing indicator payload:', payload)
-      // Refresh typing users list
-      const typingData = await typingService.getTypingUsers()
-      // Filter out current user from typing list
-      const otherTypingUsers = typingData.filter(u => u.user_id !== user.id)
-      setTypingUsers(otherTypingUsers)
-    })
-
-    // Get initial typing users
-    typingService.getTypingUsers().then(data => {
-      const otherTypingUsers = data.filter(u => u.user_id !== user.id)
-      setTypingUsers(otherTypingUsers)
-    })
-
-    return () => {
-      messageChannel.unsubscribe()
-      typingChannel.unsubscribe()
-      // Clean up typing status when component unmounts
-      typingService.cleanup(user.id)
+      return
     }
-  }, [user.id])
 
-  // Fetch a single new message with username
-  const fetchNewMessage = async (messageId) => {
+    setIsFetchingMessages(true)
+    
     try {
-      const data = await messageService.fetchNewMessage(messageId)
-      if (data) {
-        setMessages(prev => [...prev, data])
+      return await measure.time('fetchMessages', async () => {
+        // Try primary method first (with username)
+        const data = await messageService.fetchMessagesWithUsername()
+        
+        performanceMonitor.trackMessageFetch('messagesWithUsername', data?.length || 0)
+        
+        if (import.meta.env.DEV) {
+          console.log('Messages fetched:', data?.length, 'messages')
+        }
+        
+        setMessages(data || [])
+        return data
+      })
+    } catch (error) {
+      console.error('Error fetching messages with username:', error)
+      
+      // Fallback to basic messages only if the primary method fails
+      try {
+        return await measure.time('fetchMessages-fallback', async () => {
+          const fallbackData = await messageService.fetchMessages()
+          
+          performanceMonitor.trackMessageFetch('messages-fallback', fallbackData?.length || 0)
+          
+          if (import.meta.env.DEV) {
+            console.log('Fallback messages fetched:', fallbackData?.length, 'messages')
+          }
+          
+          setMessages(fallbackData || [])
+          return fallbackData
+        })
+      } catch (fallbackError) {
+        console.error('Both message fetching methods failed:', fallbackError)
+        // Set empty array to prevent infinite loading states
+        setMessages([])
+        return []
       }
+    } finally {
+      setIsFetchingMessages(false)
+    }
+  }, [isFetchingMessages])
+
+  // Optimized single message fetching with performance tracking
+  const fetchNewMessage = useCallback(async (messageId) => {
+    try {
+      await measure.time('fetchNewMessage', async () => {
+        const data = await messageService.fetchNewMessage(messageId)
+        
+        performanceMonitor.trackMessageFetch('newMessage', 1)
+        
+        if (data) {
+          setMessages(prev => {
+            // Update existing message or add new one
+            const existingIndex = prev.findIndex(msg => msg.id === messageId)
+            if (existingIndex >= 0) {
+              // Update existing message with complete data
+              const updated = [...prev]
+              updated[existingIndex] = data
+              return updated
+            } else {
+              // Add new message
+              return [...prev, data]
+            }
+          })
+        }
+      })
     } catch (error) {
       console.error('Error fetching new message:', error)
     }
-  }
+  }, [])
 
-  // Scroll to bottom when new messages arrive
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+  // Memoized callback for real-time message updates
+  const handleMessageUpdate = useCallback((payload) => {
+    if (import.meta.env.DEV) {
+      console.log('Real-time message payload:', payload)
+    }
+    
+    if (payload.eventType === 'INSERT' || payload.type === 'INSERT') {
+      // Optimize: Add message directly instead of re-fetching
+      const newMessage = {
+        ...payload.new,
+        // Add basic username fallback (will be updated by full fetch if needed)
+        username: payload.new.user_id === user.id ? (userProfile?.username || user.email) : 'Unknown User'
+      }
+      
+      setMessages(prev => {
+        // Prevent duplicates
+        const exists = prev.some(msg => msg.id === newMessage.id)
+        if (exists) return prev
+        return [...prev, newMessage]
+      })
+      
+      // Fetch complete message data in background for username accuracy
+      fetchNewMessage(payload.new.id).catch(console.error)
+    }
+  }, [user.id, user.email, userProfile?.username, fetchNewMessage])
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  const fetchMessages = async () => {
+  // Memoized callback for typing indicator updates
+  const handleTypingUpdate = useCallback(async (payload) => {
+    if (import.meta.env.DEV) {
+      console.log('Typing indicator payload:', payload)
+    }
+    
     try {
-      console.log('Fetching messages...')
-      const data = await messageService.fetchMessagesWithUsername()
-      console.log('Messages fetched:', data)
-      setMessages(data)
+      // Add a small delay to ensure database consistency
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Optimize: Update typing users more efficiently
+      const typingData = await typingService.getTypingUsers()
+      const otherTypingUsers = typingData.filter(u => u.user_id !== user.id)
+      
+      if (import.meta.env.DEV) {
+        console.log('Typing users updated:', otherTypingUsers)
+      }
+      
+      setTypingUsers(otherTypingUsers)
     } catch (error) {
-      console.error('Error fetching messages:', error)
-      // Try fallback to basic messages table if view fails
+      console.error('Error updating typing users:', error)
+    }
+  }, [user.id])
+
+  // Optimized initialization and subscription management
+  useEffect(() => {
+    let mounted = true
+    let messageChannel = null
+    let typingChannel = null
+
+    // Initialize data and subscriptions
+    const initializeChat = async () => {
       try {
-        console.log('Trying fallback to basic messages...')
-        const fallbackData = await messageService.fetchMessages()
-        console.log('Fallback messages:', fallbackData)
-        setMessages(fallbackData)
-      } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError)
+        // Fetch initial messages
+        await fetchMessages()
+        
+        if (!mounted) return
+
+        // Subscribe to real-time messages with optimized callback and performance tracking
+        messageChannel = messageService.subscribeToMessages(handleMessageUpdate)
+        performanceMonitor.trackSubscription('messages', 'create')
+
+        // Subscribe to typing indicators with optimized callback and performance tracking
+        typingChannel = typingService.subscribeToTypingIndicators(handleTypingUpdate)
+        performanceMonitor.trackSubscription('typing_indicators', 'create')
+
+        // Get initial typing users
+        const typingData = await typingService.getTypingUsers()
+        if (mounted) {
+          const otherTypingUsers = typingData.filter(u => u.user_id !== user.id)
+          setTypingUsers(otherTypingUsers)
+        }
+      } catch (error) {
+        console.error('Error initializing chat:', error)
       }
     }
-  }
+
+    initializeChat()
+
+    // Cleanup function with proper channel management and performance tracking
+    return () => {
+      mounted = false
+      
+      // Unsubscribe from channels with performance tracking
+      if (messageChannel) {
+        messageChannel.unsubscribe()
+        performanceMonitor.trackSubscription('messages', 'destroy')
+      }
+      if (typingChannel) {
+        typingChannel.unsubscribe()
+        performanceMonitor.trackSubscription('typing_indicators', 'destroy')
+      }
+      
+      // Clean up typing status
+      typingService.cleanup(user.id)
+      
+      // Log performance summary when chat component unmounts
+      if (import.meta.env.DEV) {
+        setTimeout(() => performanceMonitor.logSummary(), 1000)
+      }
+    }
+  }, [user.id, handleMessageUpdate, handleTypingUpdate, fetchMessages])
+
+  // Memoized scroll function
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [])
+
+
+  // Scroll to bottom when new messages arrive (debounced)
+  useEffect(() => {
+    const timeoutId = setTimeout(scrollToBottom, 100)
+    return () => clearTimeout(timeoutId)
+  }, [messages, scrollToBottom])
 
   const handleSendMessage = async (e) => {
     e.preventDefault()
@@ -363,16 +492,20 @@ export default function Chat({ user, onLogout }) {
           </div>
         </ScrollArea>
 
-        {/* Typing Indicators */}
-        {typingUsers.length > 0 && (
-          <div className="fixed bottom-20 left-4 right-4 z-30">
-            <Card className="bg-gray-100 dark:bg-gray-800 border-none shadow-sm p-2">
-              <p className="text-xs text-muted-foreground italic">
-                {typingUsers.length === 1 
-                  ? `${typingUsers[0].username || 'Someone'} is typing...`
-                  : typingUsers.length === 2
-                  ? `${typingUsers[0].username || 'Someone'} and ${typingUsers[1].username || 'someone'} are typing...`
-                  : `${typingUsers[0].username || 'Someone'} and ${typingUsers.length - 1} others are typing...`
+        {/* Typing Indicators - Position above the input footer */}
+        {(typingUsers.length > 0 || import.meta.env.DEV) && (
+          <div className="fixed bottom-20 left-4 right-4 z-50 pointer-events-none">
+            <Card className="bg-yellow-100 dark:bg-yellow-900/80 border-yellow-300 dark:border-yellow-700 shadow-lg p-3 animate-pulse">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 italic font-medium">
+                {typingUsers.length > 0 
+                  ? typingUsers.length === 1 
+                    ? `${typingUsers[0].username || 'Someone'} is typing...`
+                    : typingUsers.length === 2
+                    ? `${typingUsers[0].username || 'Someone'} and ${typingUsers[1].username || 'someone'} are typing...`
+                    : `${typingUsers[0].username || 'Someone'} and ${typingUsers.length - 1} others are typing...`
+                  : import.meta.env.DEV 
+                    ? `💻 DEV: Typing indicator test (${typingUsers.length} users)`
+                    : ''
                 }
               </p>
             </Card>
@@ -393,6 +526,15 @@ export default function Chat({ user, onLogout }) {
                     // Trigger typing indicator
                     if (e.target.value.trim()) {
                       typingService.startTyping(user.id)
+                      if (import.meta.env.DEV) {
+                        console.log('Started typing for user:', user.id)
+                      }
+                    } else {
+                      // Stop typing when input is empty
+                      typingService.stopTyping(user.id)
+                      if (import.meta.env.DEV) {
+                        console.log('Stopped typing for user:', user.id)
+                      }
                     }
                   }}
                   onBlur={() => {

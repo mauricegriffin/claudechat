@@ -7,6 +7,10 @@ export const typingService = {
   // Update typing status
   async updateTypingStatus(userId, isTyping = true) {
     try {
+      if (import.meta.env.DEV) {
+        console.log('Updating typing status:', { userId, isTyping })
+      }
+      
       const { error } = await supabase
         .from('typing_indicators')
         .upsert({
@@ -18,6 +22,10 @@ export const typingService = {
         })
       
       if (error) throw error
+      
+      if (import.meta.env.DEV) {
+        console.log('Typing status updated successfully:', { userId, isTyping })
+      }
     } catch (error) {
       console.error('Error updating typing status:', error)
     }
@@ -53,11 +61,37 @@ export const typingService = {
   // Fetch current typing users
   async getTypingUsers() {
     try {
+      // Try the view first
       const { data, error } = await supabase
         .from('typing_indicators_with_username')
         .select('*')
       
-      if (error) throw error
+      if (error) {
+        console.warn('View query failed, trying direct table query:', error)
+        
+        // Fallback to direct table query with join
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('typing_indicators')
+          .select(`
+            id,
+            user_id,
+            is_typing,
+            last_typed_at,
+            created_at,
+            user_profiles!inner(username)
+          `)
+          .eq('is_typing', true)
+          .gte('last_typed_at', new Date(Date.now() - 5000).toISOString()) // Last 5 seconds
+        
+        if (fallbackError) throw fallbackError
+        
+        // Transform the data to match expected format
+        return (fallbackData || []).map(item => ({
+          ...item,
+          username: item.user_profiles?.username || 'Unknown User'
+        }))
+      }
+      
       return data || []
     } catch (error) {
       console.error('Error fetching typing users:', error)

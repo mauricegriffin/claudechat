@@ -23,18 +23,32 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Use localStorage for persistent sessions across browser sessions
+    // Optimized storage with better performance
     storage: window.localStorage,
-    // Automatically refresh tokens before expiry
+    // Automatic token refresh with optimized timing
     autoRefreshToken: true,
-    // Keep sessions active and detect changes
+    // Session persistence optimized
     persistSession: true,
-    // Detect auth changes in other tabs/windows
+    // Detect auth changes in other tabs (necessary for multi-tab sync)
     detectSessionInUrl: true,
-    // Use PKCE flow for better security (default behavior)
-    // flowType is not specified, which defaults to 'pkce'
-    // Add debug logging for auth state changes
-    debug: true
+    // PKCE flow for security (default)
+    flowType: 'pkce',
+    // Disable debug in production, reduce in development
+    debug: import.meta.env.DEV ? false : false,
+    // Optimize token refresh timing (default 60s before expiry)
+    refreshAheadDuration: 120
+  },
+  realtime: {
+    // Optimize real-time performance
+    params: {
+      eventsPerSecond: 10
+    }
+  },
+  // Add global performance options
+  global: {
+    headers: {
+      'X-Client-Info': 'claudechat-web'
+    }
   }
 })
 

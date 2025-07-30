@@ -4,6 +4,8 @@ import Login from './features/auth/components/Login'
 import Signup from './features/auth/components/Signup'
 import Chat from './features/chat/components/Chat'
 import UpdateNotification from './components/UpdateNotification'
+import PerformanceDashboard from './components/PerformanceDashboard'
+import { performanceMonitor } from './lib/performance'
 // Import shadcn/ui components
 import { Button } from './components/ui/button'
 
@@ -16,42 +18,79 @@ function App() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check for existing session on mount
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      setLoading(false)
+    let mounted = true
+    
+    // Optimized session initialization with performance tracking
+    const initializeAuth = async () => {
+      try {
+        performanceMonitor.trackAuthCall('getSession')
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Auth session error:', error)
+          if (mounted) {
+            setUser(null)
+            setLoading(false)
+          }
+          return
+        }
+        
+        if (mounted) {
+          setUser(session?.user ?? null)
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error)
+        if (mounted) {
+          setUser(null)
+          setLoading(false)
+        }
+      }
     }
 
-    getSession()
+    // Initialize auth state
+    initializeAuth()
 
-    // Subscribe to auth state changes
-    // This ensures the app updates when user logs in/out in another tab
+    // Subscribe to auth state changes with optimized handler and performance tracking
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.id)
-        setUser(session?.user ?? null)
+      (event, session) => {
+        if (!mounted) return
+        
+        // Skip tracking for initial session to avoid frequency warnings
+        if (event !== 'INITIAL_SESSION') {
+          performanceMonitor.trackAuthCall(`authStateChange:${event}`)
+        }
+        
+        // Optimize auth state updates - only update if user actually changed
+        const newUser = session?.user ?? null
+        const currentUserId = user?.id
+        const newUserId = newUser?.id
+        
+        if (currentUserId !== newUserId) {
+          setUser(newUser)
+        }
         setLoading(false)
         
-        // Handle OAuth success
-        if (event === 'SIGNED_IN' && session?.user) {
-          console.log('User signed in successfully:', session.user.email)
-        }
-        
-        // Handle OAuth errors
-        if (event === 'SIGNED_OUT') {
-          console.log('User signed out')
-        }
-        
-        // Refresh session on token expiry to keep user logged in
-        if (event === 'TOKEN_REFRESHED') {
-          console.log('Token refreshed successfully')
+        // Optimized logging (only in development)
+        if (import.meta.env.DEV) {
+          console.log('Auth state change:', event, user?.id)
+          
+          if (event === 'SIGNED_IN' && user) {
+            console.log('User signed in:', user.email)
+          } else if (event === 'SIGNED_OUT') {
+            console.log('User signed out')
+          } else if (event === 'TOKEN_REFRESHED') {
+            console.log('Token refreshed')
+          }
         }
       }
     )
 
-    // Cleanup subscription on unmount
-    return () => subscription.unsubscribe()
+    // Cleanup function
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const handleLogin = (user) => {
@@ -83,6 +122,7 @@ function App() {
       <>
         <UpdateNotification />
         <Chat user={user} onLogout={handleLogout} />
+        <PerformanceDashboard />
       </>
     )
   }
@@ -121,6 +161,7 @@ function App() {
           </div>
         </div>
       )}
+      <PerformanceDashboard />
     </div>
   )
 }
