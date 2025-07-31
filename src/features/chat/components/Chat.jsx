@@ -487,7 +487,7 @@ export default function Chat({ user, onLogout }) {
                             style={{ maxHeight: '300px' }}
                             onClick={() => window.open(message.image_url, '_blank')}
                           />
-                          {message.content && (
+                          {message.content && message.content !== 'Image' && (
                             <p className="text-sm break-words">
                               {message.content}
                             </p>

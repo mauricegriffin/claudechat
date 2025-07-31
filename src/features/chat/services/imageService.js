@@ -62,7 +62,7 @@ export const imageService = {
         .from('messages')
         .insert({
           user_id: userId,
-          content: caption,
+          content: caption || 'Image', // Default to 'Image' if no caption
           image_url: imageUrl,
           message_type: 'image'
         })
