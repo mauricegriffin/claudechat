@@ -4,8 +4,6 @@ import Login from './features/auth/components/Login'
 import Signup from './features/auth/components/Signup'
 import Chat from './features/chat/components/Chat'
 import UpdateNotification from './components/UpdateNotification'
-import PerformanceDashboard from './components/PerformanceDashboard'
-import { performanceMonitor } from './lib/performance'
 // Import shadcn/ui components
 import { Button } from './components/ui/button'
 
@@ -20,10 +18,9 @@ function App() {
   useEffect(() => {
     let mounted = true
     
-    // Optimized session initialization with performance tracking
+    // Optimized session initialization
     const initializeAuth = async () => {
       try {
-        performanceMonitor.trackAuthCall('getSession')
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error) {
@@ -51,15 +48,10 @@ function App() {
     // Initialize auth state
     initializeAuth()
 
-    // Subscribe to auth state changes with optimized handler and performance tracking
+    // Subscribe to auth state changes with optimized handler
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!mounted) return
-        
-        // Skip tracking for initial session to avoid frequency warnings
-        if (event !== 'INITIAL_SESSION') {
-          performanceMonitor.trackAuthCall(`authStateChange:${event}`)
-        }
         
         // Optimize auth state updates - only update if user actually changed
         const newUser = session?.user ?? null
@@ -122,7 +114,6 @@ function App() {
       <>
         <UpdateNotification />
         <Chat user={user} onLogout={handleLogout} />
-        <PerformanceDashboard />
       </>
     )
   }
@@ -161,7 +152,6 @@ function App() {
           </div>
         </div>
       )}
-      <PerformanceDashboard />
     </div>
   )
 }

@@ -5,7 +5,6 @@ import { typingService } from '../services/typingService'
 import { imageService } from '../services/imageService'
 import { subscribeToPush, isPushSupported, getNotificationPermission } from '../../../services/pushService'
 import { sendMessageNotification } from '../../../services/notificationService'
-import { performanceMonitor, measure } from '../../../lib/performance'
 import ImageUpload from './ImageUpload'
 
 // Import shadcn/ui components
@@ -109,7 +108,7 @@ export default function Chat({ user, onLogout }) {
   // State to prevent multiple simultaneous fetches
   const [isFetchingMessages, setIsFetchingMessages] = useState(false)
 
-  // Optimized message fetching with performance tracking (moved up to avoid hoisting issues)
+  // Optimized message fetching (moved up to avoid hoisting issues)
   const fetchMessages = useCallback(async () => {
     // Prevent multiple simultaneous fetches
     if (isFetchingMessages) {
@@ -122,36 +121,28 @@ export default function Chat({ user, onLogout }) {
     setIsFetchingMessages(true)
     
     try {
-      return await measure.time('fetchMessages', async () => {
-        // Try primary method first (with username)
-        const data = await messageService.fetchMessagesWithUsername()
-        
-        performanceMonitor.trackMessageFetch('messagesWithUsername', data?.length || 0)
-        
-        if (import.meta.env.DEV) {
-          console.log('Messages fetched:', data?.length, 'messages')
-        }
-        
-        setMessages(data || [])
-        return data
-      })
+      // Try primary method first (with username)
+      const data = await messageService.fetchMessagesWithUsername()
+      
+      if (import.meta.env.DEV) {
+        console.log('Messages fetched:', data?.length, 'messages')
+      }
+      
+      setMessages(data || [])
+      return data
     } catch (error) {
       console.error('Error fetching messages with username:', error)
       
       // Fallback to basic messages only if the primary method fails
       try {
-        return await measure.time('fetchMessages-fallback', async () => {
-          const fallbackData = await messageService.fetchMessages()
-          
-          performanceMonitor.trackMessageFetch('messages-fallback', fallbackData?.length || 0)
-          
-          if (import.meta.env.DEV) {
-            console.log('Fallback messages fetched:', fallbackData?.length, 'messages')
-          }
-          
-          setMessages(fallbackData || [])
-          return fallbackData
-        })
+        const fallbackData = await messageService.fetchMessages()
+        
+        if (import.meta.env.DEV) {
+          console.log('Fallback messages fetched:', fallbackData?.length, 'messages')
+        }
+        
+        setMessages(fallbackData || [])
+        return fallbackData
       } catch (fallbackError) {
         console.error('Both message fetching methods failed:', fallbackError)
         // Set empty array to prevent infinite loading states
@@ -163,30 +154,26 @@ export default function Chat({ user, onLogout }) {
     }
   }, [isFetchingMessages])
 
-  // Optimized single message fetching with performance tracking
+  // Optimized single message fetching
   const fetchNewMessage = useCallback(async (messageId) => {
     try {
-      await measure.time('fetchNewMessage', async () => {
-        const data = await messageService.fetchNewMessage(messageId)
-        
-        performanceMonitor.trackMessageFetch('newMessage', 1)
-        
-        if (data) {
-          setMessages(prev => {
-            // Update existing message or add new one
-            const existingIndex = prev.findIndex(msg => msg.id === messageId)
-            if (existingIndex >= 0) {
-              // Update existing message with complete data
-              const updated = [...prev]
-              updated[existingIndex] = data
-              return updated
-            } else {
-              // Add new message
-              return [...prev, data]
-            }
-          })
-        }
-      })
+      const data = await messageService.fetchNewMessage(messageId)
+      
+      if (data) {
+        setMessages(prev => {
+          // Update existing message or add new one
+          const existingIndex = prev.findIndex(msg => msg.id === messageId)
+          if (existingIndex >= 0) {
+            // Update existing message with complete data
+            const updated = [...prev]
+            updated[existingIndex] = data
+            return updated
+          } else {
+            // Add new message
+            return [...prev, data]
+          }
+        })
+      }
     } catch (error) {
       console.error('Error fetching new message:', error)
     }
@@ -257,13 +244,11 @@ export default function Chat({ user, onLogout }) {
         
         if (!mounted) return
 
-        // Subscribe to real-time messages with optimized callback and performance tracking
+        // Subscribe to real-time messages with optimized callback
         messageChannel = messageService.subscribeToMessages(handleMessageUpdate)
-        performanceMonitor.trackSubscription('messages', 'create')
 
-        // Subscribe to typing indicators with optimized callback and performance tracking
+        // Subscribe to typing indicators with optimized callback
         typingChannel = typingService.subscribeToTypingIndicators(handleTypingUpdate)
-        performanceMonitor.trackSubscription('typing_indicators', 'create')
 
         // Get initial typing users
         const typingData = await typingService.getTypingUsers()
@@ -278,27 +263,20 @@ export default function Chat({ user, onLogout }) {
 
     initializeChat()
 
-    // Cleanup function with proper channel management and performance tracking
+    // Cleanup function with proper channel management
     return () => {
       mounted = false
       
-      // Unsubscribe from channels with performance tracking
+      // Unsubscribe from channels
       if (messageChannel) {
         messageChannel.unsubscribe()
-        performanceMonitor.trackSubscription('messages', 'destroy')
       }
       if (typingChannel) {
         typingChannel.unsubscribe()
-        performanceMonitor.trackSubscription('typing_indicators', 'destroy')
       }
       
       // Clean up typing status
       typingService.cleanup(user.id)
-      
-      // Log performance summary when chat component unmounts
-      if (import.meta.env.DEV) {
-        setTimeout(() => performanceMonitor.logSummary(), 1000)
-      }
     }
   }, [user.id, handleMessageUpdate, handleTypingUpdate, fetchMessages])
 
