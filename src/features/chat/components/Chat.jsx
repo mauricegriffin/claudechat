@@ -2,9 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { authService } from '../../auth/services/authService'
 import { messageService } from '../services/messageService'
 import { typingService } from '../services/typingService'
+import { imageService } from '../services/imageService'
 import { subscribeToPush, isPushSupported, getNotificationPermission } from '../../../services/pushService'
 import { sendMessageNotification } from '../../../services/notificationService'
 import { performanceMonitor, measure } from '../../../lib/performance'
+import ImageUpload from './ImageUpload'
 
 // Import shadcn/ui components
 import { Button } from '../../../components/ui/button'
@@ -475,10 +477,27 @@ export default function Chat({ user, onLogout }) {
                         </p>
                       )}
                       
-                      {/* Message content */}
-                      <p className="text-sm break-words">
-                        {message.content}
-                      </p>
+                      {/* Message content - text or image */}
+                      {message.message_type === 'image' && message.image_url ? (
+                        <div className="space-y-2">
+                          <img 
+                            src={message.image_url} 
+                            alt="Shared image"
+                            className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                            style={{ maxHeight: '300px' }}
+                            onClick={() => window.open(message.image_url, '_blank')}
+                          />
+                          {message.content && (
+                            <p className="text-sm break-words">
+                              {message.content}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm break-words">
+                          {message.content}
+                        </p>
+                      )}
                       
                       {/* Timestamp */}
                       <p className="text-xs opacity-70 mt-1">
@@ -563,6 +582,15 @@ export default function Chat({ user, onLogout }) {
                 />
                 {/* <MessageCircle className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" /> */}
               </div>
+              
+              {/* Image upload button */}
+              <ImageUpload 
+                userId={user.id} 
+                onImageSent={() => {
+                  // Scroll to bottom after image sent
+                  setTimeout(scrollToBottom, 100)
+                }} 
+              />
               
               {/* Send button */}
               <Button
