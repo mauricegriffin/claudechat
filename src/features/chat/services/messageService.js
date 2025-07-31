@@ -17,7 +17,11 @@ export const messageService = {
       .select('*')
       .order('created_at', { ascending: true })
     
-    if (error) throw error
+    if (error) {
+      console.warn('Error fetching messages with username, trying fallback:', error)
+      // If the view doesn't exist yet (before migration), try basic table
+      return this.fetchMessages()
+    }
     return data || []
   },
 
@@ -28,7 +32,18 @@ export const messageService = {
       .eq('id', messageId)
       .single()
     
-    if (error) throw error
+    if (error) {
+      console.warn('Error fetching new message from view, trying basic table:', error)
+      // Fallback to basic messages table
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('id', messageId)
+        .single()
+      
+      if (fallbackError) throw fallbackError
+      return fallbackData
+    }
     return data
   },
 

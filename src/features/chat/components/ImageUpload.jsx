@@ -7,6 +7,9 @@ export default function ImageUpload({ userId, onImageSent }) {
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef(null)
   
+  // Temporarily disable until database migration is complete
+  const isEnabled = false // Set to true after running the migration
+  
   const handleImageSelect = async (event) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -50,10 +53,10 @@ export default function ImageUpload({ userId, onImageSent }) {
         type="button"
         size="icon"
         variant="ghost"
-        onClick={() => fileInputRef.current?.click()}
-        disabled={uploading}
-        className="text-white hover:bg-white/20"
-        title="Send image"
+        onClick={() => isEnabled && fileInputRef.current?.click()}
+        disabled={uploading || !isEnabled}
+        className={`text-white hover:bg-white/20 ${!isEnabled ? 'opacity-50' : ''}`}
+        title={isEnabled ? "Send image" : "Image upload disabled - run database migration first"}
       >
         {uploading ? (
           <Loader2 className="h-4 w-4 animate-spin" />
