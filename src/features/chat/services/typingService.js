@@ -131,6 +131,13 @@ export const typingService = {
       .subscribe()
   },
 
+  // Subscribe to conversation-specific typing indicators (future enhancement)
+  subscribeToConversationTyping(conversationId, callback) {
+    // For now, use the global typing subscription
+    // TODO: Implement conversation-specific typing indicators
+    return this.subscribeToTypingIndicators(callback)
+  },
+
   // Clean up on component unmount
   cleanup(userId) {
     if (this.debounceTimer) {

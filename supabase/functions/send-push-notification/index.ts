@@ -82,10 +82,10 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get message details
+    // Get message details including conversation_id
     const { data: message, error: messageError } = await supabase
       .from('messages')
-      .select('content')
+      .select('content, conversation_id')
       .eq('id', messageId)
       .single()
 
@@ -104,11 +104,34 @@ serve(async (req) => {
       .eq('id', senderId)
       .single()
 
-    // Get all push subscriptions except for the sender
+    // Get conversation participants (excluding sender)
+    const { data: participants, error: participantsError } = await supabase
+      .from('conversation_participants')
+      .select('user_id')
+      .eq('conversation_id', message.conversation_id)
+      .neq('user_id', senderId)
+
+    if (participantsError) {
+      console.error('Error fetching conversation participants:', participantsError)
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch conversation participants' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
+    }
+
+    if (!participants || participants.length === 0) {
+      return new Response(
+        JSON.stringify({ success: true, sent: 0, message: 'No participants found in conversation' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Get push subscriptions for conversation participants only
+    const participantIds = participants.map(p => p.user_id)
     const { data: subscriptions, error: subscriptionsError } = await supabase
       .from('push_subscriptions')
       .select('*')
-      .neq('user_id', senderId)
+      .in('user_id', participantIds)
 
     if (subscriptionsError) {
       console.error('Error fetching subscriptions:', subscriptionsError)
@@ -211,7 +234,7 @@ serve(async (req) => {
     
     const failed = results.length - successful
 
-    console.log(`Push notifications sent: ${successful} successful, ${failed} failed`)
+    console.log(`Push notifications sent to conversation ${message.conversation_id}: ${successful} successful, ${failed} failed out of ${participantIds.length} participants`)
 
     return new Response(
       JSON.stringify({ 

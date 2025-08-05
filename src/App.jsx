@@ -3,7 +3,9 @@ import { supabase } from './supabaseClient'
 import Login from './features/auth/components/Login'
 import Signup from './features/auth/components/Signup'
 import Chat from './features/chat/components/Chat'
+import UserList from './components/UserList'
 import UpdateNotification from './components/UpdateNotification'
+import { ConnectionProvider } from './providers/ConnectionProvider'
 // Import shadcn/ui components
 import { Button } from './components/ui/button'
 
@@ -14,6 +16,10 @@ function App() {
   const [authView, setAuthView] = useState('login')
   // Loading state while checking authentication
   const [loading, setLoading] = useState(true)
+  // New navigation state
+  const [currentView, setCurrentView] = useState('userList') // 'userList' | 'chat'
+  const [currentConversation, setCurrentConversation] = useState(null)
+  const [conversationPartner, setConversationPartner] = useState(null)
 
   useEffect(() => {
     let mounted = true
@@ -83,7 +89,7 @@ function App() {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [])
+  }, [user])
 
   const handleLogin = (user) => {
     setUser(user)
@@ -95,6 +101,23 @@ function App() {
 
   const handleLogout = () => {
     setUser(null)
+    // Reset navigation state on logout
+    setCurrentView('userList')
+    setCurrentConversation(null)
+    setConversationPartner(null)
+  }
+
+  // New navigation handlers
+  const handleConversationSelect = (conversation, partner) => {
+    setCurrentConversation(conversation)
+    setConversationPartner(partner)
+    setCurrentView('chat')
+  }
+
+  const handleBackToUserList = () => {
+    setCurrentView('userList')
+    setCurrentConversation(null)
+    setConversationPartner(null)
   }
 
   // Loading state while checking authentication
@@ -108,13 +131,34 @@ function App() {
     )
   }
 
-  // Authenticated view - show chat interface
+  // Authenticated view - show appropriate interface based on current view
   if (user) {
+    if (currentView === 'chat' && currentConversation) {
+      return (
+        <ConnectionProvider>
+          <UpdateNotification />
+          <Chat 
+            user={user} 
+            conversation={currentConversation}
+            conversationPartner={conversationPartner}
+            onBack={handleBackToUserList}
+            onLogout={handleLogout} 
+          />
+        </ConnectionProvider>
+      )
+    }
+    
+    // Default view is UserList
     return (
-      <>
+      <ConnectionProvider>
         <UpdateNotification />
-        <Chat user={user} onLogout={handleLogout} />
-      </>
+        <UserList 
+          user={user}
+          onConversationSelect={handleConversationSelect}
+          onLogout={handleLogout}
+          onSettings={() => {/* TODO: Implement settings */}}
+        />
+      </ConnectionProvider>
     )
   }
 

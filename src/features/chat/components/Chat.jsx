@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { authService } from '../../auth/services/authService'
-import { messageService } from '../services/messageService'
-import { typingService } from '../services/typingService'
-import { imageService } from '../services/imageService'
+import { messageService } from '../services/messageServiceSimple'
+import { typingService } from '../services/typingServiceFixed'
+// import { imageService } from '../services/imageService' // Imported in ImageUpload component
 import { subscribeToPush, isPushSupported, getNotificationPermission } from '../../../services/pushService'
 import { sendMessageNotification } from '../../../services/notificationService'
 import ImageUpload from './ImageUpload'
@@ -23,10 +23,12 @@ import {
   MessageCircle, 
   Send, 
   User,
-  Loader2
+  Loader2,
+  ArrowLeft,
+  Users
 } from 'lucide-react'
 
-export default function Chat({ user, onLogout }) {
+export default function Chat({ user, conversation, conversationPartner, onBack, onLogout }) {
   // State management for chat functionality
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
@@ -108,8 +110,10 @@ export default function Chat({ user, onLogout }) {
   // State to prevent multiple simultaneous fetches
   const [isFetchingMessages, setIsFetchingMessages] = useState(false)
 
-  // Optimized message fetching (moved up to avoid hoisting issues)
+  // Fetch messages for current conversation
   const fetchMessages = useCallback(async () => {
+    if (!conversation?.id) return
+
     // Prevent multiple simultaneous fetches
     if (isFetchingMessages) {
       if (import.meta.env.DEV) {
@@ -121,38 +125,28 @@ export default function Chat({ user, onLogout }) {
     setIsFetchingMessages(true)
     
     try {
-      // Try primary method first (with username)
-      const data = await messageService.fetchMessagesWithUsername()
+      // Use conversation-specific message fetching
+      const data = await messageService.fetchConversationMessages(conversation.id)
       
       if (import.meta.env.DEV) {
-        console.log('Messages fetched:', data?.length, 'messages')
+        console.log('Conversation messages fetched:', data?.length, 'messages for conversation:', conversation.id)
       }
       
       setMessages(data || [])
+      
+      // Mark conversation as read when messages are loaded
+      await messageService.markConversationAsRead(conversation.id, user.id)
+      
       return data
     } catch (error) {
-      console.error('Error fetching messages with username:', error)
-      
-      // Fallback to basic messages only if the primary method fails
-      try {
-        const fallbackData = await messageService.fetchMessages()
-        
-        if (import.meta.env.DEV) {
-          console.log('Fallback messages fetched:', fallbackData?.length, 'messages')
-        }
-        
-        setMessages(fallbackData || [])
-        return fallbackData
-      } catch (fallbackError) {
-        console.error('Both message fetching methods failed:', fallbackError)
-        // Set empty array to prevent infinite loading states
-        setMessages([])
-        return []
-      }
+      console.error('Error fetching conversation messages:', error)
+      // Set empty array to prevent infinite loading states
+      setMessages([])
+      return []
     } finally {
       setIsFetchingMessages(false)
     }
-  }, [isFetchingMessages])
+  }, [conversation?.id, user.id, isFetchingMessages])
 
   // Optimized single message fetching
   const fetchNewMessage = useCallback(async (messageId) => {
@@ -244,18 +238,26 @@ export default function Chat({ user, onLogout }) {
         
         if (!mounted) return
 
-        // Subscribe to real-time messages with optimized callback
-        messageChannel = messageService.subscribeToMessages(handleMessageUpdate)
+        // Subscribe to conversation-specific real-time messages
+        messageChannel = messageService.subscribeToConversationMessages(
+          conversation.id, 
+          handleMessageUpdate
+        )
 
-        // Subscribe to typing indicators with optimized callback
-        typingChannel = typingService.subscribeToTypingIndicators(handleTypingUpdate)
+        // Subscribe to conversation-specific typing indicators
+        // Temporarily disabled due to missing table
+        // typingChannel = typingService.subscribeToConversationTyping(
+        //   conversation.id, 
+        //   handleTypingUpdate
+        // )
 
         // Get initial typing users
-        const typingData = await typingService.getTypingUsers()
-        if (mounted) {
-          const otherTypingUsers = typingData.filter(u => u.user_id !== user.id)
-          setTypingUsers(otherTypingUsers)
-        }
+        // Temporarily disabled due to missing table
+        // const typingData = await typingService.getTypingUsers()
+        // if (mounted) {
+        //   const otherTypingUsers = typingData.filter(u => u.user_id !== user.id)
+        //   setTypingUsers(otherTypingUsers)
+        // }
       } catch (error) {
         console.error('Error initializing chat:', error)
       }
@@ -276,9 +278,9 @@ export default function Chat({ user, onLogout }) {
       }
       
       // Clean up typing status
-      typingService.cleanup(user.id)
+      // typingService.cleanup(user.id)
     }
-  }, [user.id, handleMessageUpdate, handleTypingUpdate, fetchMessages])
+  }, [conversation?.id, user.id, handleMessageUpdate, handleTypingUpdate])
 
   // Memoized scroll function
   const scrollToBottom = useCallback(() => {
@@ -294,18 +296,22 @@ export default function Chat({ user, onLogout }) {
 
   const handleSendMessage = async (e) => {
     e.preventDefault()
-    if (!newMessage.trim()) return
+    if (!newMessage.trim() || !conversation?.id) return
 
     setLoading(true)
     
     try {
-      console.log('Sending message:', newMessage.trim(), 'for user:', user.id)
-      const sentMessage = await messageService.sendMessage(newMessage.trim(), user.id)
+      console.log('Sending message:', newMessage.trim(), 'to conversation:', conversation.id)
+      const sentMessage = await messageService.sendConversationMessage(
+        conversation.id,
+        newMessage.trim(), 
+        user.id
+      )
       console.log('Message sent successfully:', sentMessage)
       setNewMessage('')
       
       // Stop typing indicator when message is sent
-      typingService.stopTyping(user.id)
+      // typingService.stopTyping(user.id)
       
       // Send push notification to other users (don't wait for it)
       if (sentMessage?.id) {
@@ -351,6 +357,25 @@ export default function Chat({ user, onLogout }) {
     })
   }
 
+  // Get conversation display name
+  const getConversationName = () => {
+    if (conversation?.type === 'group') {
+      return conversation.name || 'Group Chat'
+    }
+    if (conversationPartner) {
+      return conversationPartner.username || conversationPartner.email?.split('@')[0] || 'Direct Message'
+    }
+    return 'Direct Message'
+  }
+
+  // Get conversation subtitle
+  const getConversationSubtitle = () => {
+    if (conversation?.type === 'group') {
+      return `${conversation.participant_count || 0} members`
+    }
+    return 'Direct message'
+  }
+
   // Settings page component
   if (showSettings) {
     return (
@@ -368,7 +393,38 @@ export default function Chat({ user, onLogout }) {
       {/* Fixed Navigation Bar */}
       <Card className="rounded-none border-b bg-red-900 text-white fixed top-0 left-0 right-0 z-50 p-1">
         <CardContent className="flex items-center justify-between px-4 py-0">
-          {/* Hamburger menu button */}
+          {/* Back button and conversation info */}
+          <div className="flex items-center space-x-3 flex-1">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-white hover:bg-white/20"
+              onClick={onBack}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            
+            <Avatar className="w-8 h-8">
+              <AvatarFallback className="bg-white/20 text-white text-sm">
+                {conversation?.type === 'group' ? (
+                  <Users className="h-4 w-4" />
+                ) : (
+                  (conversationPartner?.username?.[0] || conversationPartner?.email?.[0] || '?').toUpperCase()
+                )}
+              </AvatarFallback>
+            </Avatar>
+            
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm font-medium truncate">
+                {getConversationName()}
+              </h2>
+              <p className="text-xs text-white/70 truncate">
+                {getConversationSubtitle()}
+              </p>
+            </div>
+          </div>
+
+          {/* Menu button */}
           <Sheet open={showUserMenu} onOpenChange={setShowUserMenu}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/20">
@@ -426,11 +482,6 @@ export default function Chat({ user, onLogout }) {
               </div>
             </SheetContent>
           </Sheet>
-          
-          {/* Username display */}
-          <span className="text-sm font-medium">
-            {userProfile?.username || user.email.split('@')[0]}
-          </span>
         </CardContent>
       </Card>
 
@@ -537,23 +588,12 @@ export default function Chat({ user, onLogout }) {
                   value={newMessage}
                   onChange={(e) => {
                     setNewMessage(e.target.value)
-                    // Trigger typing indicator
-                    if (e.target.value.trim()) {
-                      typingService.startTyping(user.id)
-                      if (import.meta.env.DEV) {
-                        console.log('Started typing for user:', user.id)
-                      }
-                    } else {
-                      // Stop typing when input is empty
-                      typingService.stopTyping(user.id)
-                      if (import.meta.env.DEV) {
-                        console.log('Stopped typing for user:', user.id)
-                      }
-                    }
+                    // Typing indicators disabled temporarily
+                    // Will re-enable after fixing database issues
                   }}
                   onBlur={() => {
                     // Stop typing when user leaves input field
-                    typingService.stopTyping(user.id)
+                    // typingService.stopTyping(user.id)
                   }}
                   disabled={loading}
                   className="pr-10 bg-black text-white placeholder:text-gray-400"
@@ -563,7 +603,8 @@ export default function Chat({ user, onLogout }) {
               
               {/* Image upload button */}
               <ImageUpload 
-                userId={user.id} 
+                userId={user.id}
+                conversationId={conversation?.id}
                 onImageSent={() => {
                   // Scroll to bottom after image sent
                   setTimeout(scrollToBottom, 100)

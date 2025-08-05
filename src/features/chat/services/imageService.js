@@ -25,7 +25,7 @@ export const imageService = {
       const fileName = generateImageFilename(userId, file.name)
       
       // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('chat-images')
         .upload(fileName, compressedBlob, {
           contentType: 'image/jpeg',
@@ -50,7 +50,7 @@ export const imageService = {
   },
   
   /**
-   * Send message with image
+   * Send message with image (legacy - for Everyone group)
    * @param {string} imageUrl - URL of uploaded image
    * @param {string} userId - User ID
    * @param {string} caption - Optional caption
@@ -64,7 +64,8 @@ export const imageService = {
           user_id: userId,
           content: caption || 'Image', // Default to 'Image' if no caption
           image_url: imageUrl,
-          message_type: 'image'
+          message_type: 'image',
+          conversation_id: '00000000-0000-0000-0000-000000000001' // Everyone group
         })
         .select()
         .single()
@@ -75,6 +76,47 @@ export const imageService = {
       return data
     } catch (error) {
       console.error('Error sending image message:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Send message with image to specific conversation
+   * @param {string} imageUrl - URL of uploaded image
+   * @param {string} userId - User ID
+   * @param {string} conversationId - Conversation ID
+   * @param {string} caption - Optional caption
+   * @returns {Promise<Object>} Created message
+   */
+  async sendImageMessageToConversation(imageUrl, userId, conversationId, caption = null) {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
+          user_id: userId,
+          content: caption || 'Image', // Default to 'Image' if no caption
+          image_url: imageUrl,
+          message_type: 'image',
+          conversation_id: conversationId
+        })
+        .select(`
+          *,
+          user_profiles(username)
+        `)
+        .single()
+      
+      if (error) throw error
+      
+      // Add username fallback
+      const messageWithUsername = {
+        ...data,
+        username: data.user_profiles?.username || 'Unknown User'
+      }
+      
+      console.log('Image message sent to conversation:', messageWithUsername)
+      return messageWithUsername
+    } catch (error) {
+      console.error('Error sending image message to conversation:', error)
       throw error
     }
   },

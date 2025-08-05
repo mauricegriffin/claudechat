@@ -120,24 +120,46 @@ export const authService = {
     return data
   },
 
+  // Cache to prevent excessive requests
+  _profileCache: new Map(),
+  _profileCacheExpiry: new Map(),
+  
   async getUserProfile(userId) {
     try {
+      // Check cache first (5 minute expiry)
+      const now = Date.now()
+      const cached = this._profileCache.get(userId)
+      const expiry = this._profileCacheExpiry.get(userId)
+      
+      if (cached && expiry && now < expiry) {
+        return cached
+      }
+      
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', userId)
         .single()
       
-      // If table doesn't exist or no record found, return null
-      if (error && (error.code === 'PGRST116' || error.code === '42P01')) {
-        return null
+      // If any error, return cached result or null
+      if (error) {
+        console.debug('Profile not found, will use defaults')
+        const result = cached || null
+        // Cache null results for 1 minute to prevent repeated failed requests
+        this._profileCache.set(userId, result)
+        this._profileCacheExpiry.set(userId, now + 60000) // 1 minute
+        return result
       }
       
-      if (error) throw error
+      // Cache successful result for 5 minutes
+      this._profileCache.set(userId, data)
+      this._profileCacheExpiry.set(userId, now + 300000) // 5 minutes
+      
       return data
     } catch (error) {
-      console.warn('getUserProfile failed, user_profiles table may not exist:', error.message)
-      return null
+      // Return cached result if available, otherwise null
+      const cached = this._profileCache.get(userId)
+      return cached || null
     }
   },
 
@@ -165,10 +187,20 @@ export const authService = {
           .select()
         
         if (insertError) throw insertError
+        
+        // Invalidate cache for this user
+        this._profileCache.delete(userId)
+        this._profileCacheExpiry.delete(userId)
+        
         return insertData?.[0]
       }
       
       if (updateError) throw updateError
+      
+      // Invalidate cache for this user
+      this._profileCache.delete(userId)
+      this._profileCacheExpiry.delete(userId)
+      
       return updateData?.[0]
     } catch (error) {
       console.warn('updateUserProfile failed, user_profiles table may not exist:', error.message)
