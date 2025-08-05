@@ -91,6 +91,29 @@ function App() {
     }
   }, [user])
 
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = (event) => {
+      // If we're in chat view and user hits back, go to user list
+      if (currentView === 'chat') {
+        setCurrentView('userList')
+        setCurrentConversation(null)
+        setConversationPartner(null)
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    // Set initial state
+    if (currentView === 'userList') {
+      window.history.replaceState({ view: 'userList' }, '', '#')
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [currentView])
+
   const handleLogin = (user) => {
     setUser(user)
   }
@@ -112,12 +135,20 @@ function App() {
     setCurrentConversation(conversation)
     setConversationPartner(partner)
     setCurrentView('chat')
+    // Push state to browser history
+    window.history.pushState({ view: 'chat' }, '', '#chat')
   }
 
   const handleBackToUserList = () => {
-    setCurrentView('userList')
-    setCurrentConversation(null)
-    setConversationPartner(null)
+    // Use browser back if we have history
+    if (window.history.length > 1 && currentView === 'chat') {
+      window.history.back()
+    } else {
+      // Fallback to direct navigation
+      setCurrentView('userList')
+      setCurrentConversation(null)
+      setConversationPartner(null)
+    }
   }
 
   // Loading state while checking authentication
