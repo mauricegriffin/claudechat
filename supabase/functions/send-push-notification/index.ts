@@ -101,10 +101,11 @@ serve(async (req) => {
     const { data: senderProfile } = await supabase
       .from('user_profiles')
       .select('username')
-      .eq('id', senderId)
+      .eq('user_id', senderId)
       .single()
 
     // Get conversation participants (excluding sender)
+    console.log(`Fetching participants for conversation ${message.conversation_id}, excluding sender ${senderId}`)
     const { data: participants, error: participantsError } = await supabase
       .from('conversation_participants')
       .select('user_id')
@@ -128,6 +129,9 @@ serve(async (req) => {
 
     // Get push subscriptions for conversation participants only
     const participantIds = participants.map(p => p.user_id)
+    console.log(`Found ${participants.length} participants (excluding sender):`, participantIds)
+    console.log(`Sender ${senderId} should NOT be in this list`)
+    
     const { data: subscriptions, error: subscriptionsError } = await supabase
       .from('push_subscriptions')
       .select('*')
@@ -235,6 +239,8 @@ serve(async (req) => {
     const failed = results.length - successful
 
     console.log(`Push notifications sent to conversation ${message.conversation_id}: ${successful} successful, ${failed} failed out of ${participantIds.length} participants`)
+    console.log(`Notifications were sent to users:`, participantIds)
+    console.log(`Sender ${senderId} should NOT have received a notification`)
 
     return new Response(
       JSON.stringify({ 
