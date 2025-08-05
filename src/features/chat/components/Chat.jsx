@@ -562,15 +562,6 @@ export default function Chat({ user, conversation, conversationPartner, onBack, 
                       <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
                     </div>
                   </>
-                ) : import.meta.env.DEV ? (
-                  <>
-                    <span className="text-xs text-gray-500">DEV: Typing test</span>
-                    <div className="flex space-x-1">
-                      <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                      <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                      <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                    </div>
-                  </>
                 ) : null}
               </div>
             </div>
