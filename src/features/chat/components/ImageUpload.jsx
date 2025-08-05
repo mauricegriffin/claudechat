@@ -1,15 +1,39 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { imageService } from '../services/imageService'
 import { Button } from '../../../components/ui/button'
 import { ImagePlus, Loader2, Camera } from 'lucide-react'
 
 export default function ImageUpload({ userId, conversationId, onImageSent }) {
   const [uploading, setUploading] = useState(false)
+  const [hasCamera, setHasCamera] = useState(false)
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
   
   // Enable after migration is complete
   const isEnabled = true // Updated for conversation support
+  
+  // Check if device has camera capabilities
+  useEffect(() => {
+    const checkCamera = async () => {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          // Check if we can enumerate devices (may require permission)
+          const devices = await navigator.mediaDevices.enumerateDevices()
+          const videoDevices = devices.filter(device => device.kind === 'videoinput')
+          setHasCamera(videoDevices.length > 0)
+        } else {
+          // Fallback: assume camera exists on mobile devices
+          setHasCamera(/Mobi|Android/i.test(navigator.userAgent))
+        }
+      } catch (error) {
+        console.log('Camera check failed, assuming camera available on mobile:', error)
+        // Fallback: assume camera exists on mobile devices
+        setHasCamera(/Mobi|Android/i.test(navigator.userAgent))
+      }
+    }
+    
+    checkCamera()
+  }, [])
   
   const handleImageSelect = async (event) => {
     const file = event.target.files?.[0]
@@ -112,22 +136,24 @@ export default function ImageUpload({ userId, conversationId, onImageSent }) {
         )}
       </Button>
       
-      {/* Camera capture button */}
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        onClick={() => isEnabled && cameraInputRef.current?.click()}
-        disabled={uploading || !isEnabled}
-        className={`text-white hover:bg-white/20 ${!isEnabled ? 'opacity-50' : ''}`}
-        title={isEnabled ? "Take photo with camera" : "Camera disabled - run database migration first"}
-      >
-        {uploading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Camera className="h-4 w-4" />
-        )}
-      </Button>
+      {/* Camera capture button - only show if camera is available */}
+      {hasCamera && (
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          onClick={() => isEnabled && cameraInputRef.current?.click()}
+          disabled={uploading || !isEnabled}
+          className={`text-white hover:bg-white/20 ${!isEnabled ? 'opacity-50' : ''}`}
+          title={isEnabled ? "Take photo with camera" : "Camera disabled - run database migration first"}
+        >
+          {uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Camera className="h-4 w-4" />
+          )}
+        </Button>
+      )}
     </>
   )
 }
