@@ -142,14 +142,14 @@ export default function UserList({ user, onConversationSelect, onLogout, onSetti
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-red-900" />
-          <p className="text-muted-foreground">Loading conversations...</p>
+          <p className="text-gray-400">Loading conversations...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-gray-900">
       {/* Header */}
       <Card className="rounded-none border-b bg-red-900 text-white">
         <CardContent className="flex items-center justify-between px-4 py-3">
@@ -176,14 +176,14 @@ export default function UserList({ user, onConversationSelect, onLogout, onSetti
       </Card>
 
       {/* Search */}
-      <div className="p-4 border-b bg-background">
+      <div className="p-4 border-b border-gray-800 bg-gray-900">
         <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-gray-600"
           />
         </div>
       </div>
@@ -218,7 +218,7 @@ export default function UserList({ user, onConversationSelect, onLogout, onSetti
         {/* Available Users (Not Yet Conversing) */}
         {filteredUsers.length > directConversations.length && (
           <>
-            <div className="px-4 py-3 text-sm font-medium text-muted-foreground border-b bg-gray-50">
+            <div className="px-4 py-3 text-sm font-medium text-gray-400 border-b border-gray-800 bg-gray-900/50">
               Start New Conversation
             </div>
             
@@ -239,9 +239,9 @@ export default function UserList({ user, onConversationSelect, onLogout, onSetti
         {/* Empty State */}
         {conversations.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center py-12 px-4">
-            <MessageCircle className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No conversations yet</h3>
-            <p className="text-muted-foreground text-center">
+            <MessageCircle className="h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium mb-2 text-white">No conversations yet</h3>
+            <p className="text-gray-400 text-center">
               Start a conversation by selecting a user from the list above
             </p>
           </div>
@@ -289,7 +289,7 @@ function ConversationItem({ conversation, unreadCount, onClick, isGroup }) {
   return (
     <div 
       onClick={onClick}
-      className="flex items-center p-4 hover:bg-gray-100 cursor-pointer border-b border-gray-100 transition-colors group"
+      className="flex items-center p-4 hover:bg-white/10 cursor-pointer border-b border-gray-800 transition-colors group"
     >
       <Avatar className="mr-3 flex-shrink-0">
         <AvatarFallback className={isGroup ? "bg-red-900 text-white" : "bg-gray-600 text-white"}>
@@ -303,18 +303,18 @@ function ConversationItem({ conversation, unreadCount, onClick, isGroup }) {
       
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
-          <h3 className="font-medium text-sm truncate text-gray-900 group-hover:text-gray-900">
+          <h3 className="font-medium text-sm truncate text-white group-hover:text-gray-100">
             {getDisplayName()}
           </h3>
           {lastMessage && (
-            <span className="text-xs text-gray-500 group-hover:text-gray-600 ml-2 flex-shrink-0">
+            <span className="text-xs text-gray-400 group-hover:text-gray-300 ml-2 flex-shrink-0">
               {formatTime(lastMessage.created_at)}
             </span>
           )}
         </div>
         
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500 group-hover:text-gray-600 truncate flex-1">
+          <p className="text-sm text-gray-400 group-hover:text-gray-300 truncate flex-1">
             {getLastMessagePreview()}
           </p>
           {unreadCount > 0 && (
@@ -336,7 +336,7 @@ function UserItem({ user, isOnline, onClick }) {
   return (
     <div 
       onClick={onClick}
-      className="flex items-center p-4 hover:bg-gray-100 cursor-pointer border-b border-gray-100 transition-colors group"
+      className="flex items-center p-4 hover:bg-white/10 cursor-pointer border-b border-gray-800 transition-colors group"
     >
       <div className="relative mr-3">
         <Avatar>
@@ -350,15 +350,15 @@ function UserItem({ user, isOnline, onClick }) {
       </div>
       
       <div className="flex-1">
-        <h3 className="font-medium text-sm text-gray-900 group-hover:text-gray-900">
+        <h3 className="font-medium text-sm text-white group-hover:text-gray-100">
           {displayName}
         </h3>
-        <p className="text-sm text-gray-500 group-hover:text-gray-600">
+        <p className="text-sm text-gray-400 group-hover:text-gray-300">
           {isOnline ? 'Online' : 'Tap to message'}
         </p>
       </div>
       
-      <MessageCircle className="h-4 w-4 text-gray-500 group-hover:text-gray-600 flex-shrink-0" />
+      <MessageCircle className="h-4 w-4 text-gray-400 group-hover:text-gray-300 flex-shrink-0" />
     </div>
   )
 }
