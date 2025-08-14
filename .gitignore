@@ -138,3 +138,4 @@ ehthumbs.db
 Thumbs.db 
 # Local Netlify folder
 .netlify
+.claude/
