@@ -2,61 +2,81 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { authService } from '../../auth/services/authService'
 import { messageService } from '../services/messageServiceSimple'
 import { typingService } from '../services/typingServiceFixed'
-// import { imageService } from '../services/imageService' // Imported in ImageUpload component
 import { subscribeToPush, isPushSupported, getNotificationPermission } from '../../../services/pushService'
 import { sendMessageNotification } from '../../../services/notificationService'
 import ImageUpload from './ImageUpload'
 
-// Import shadcn/ui components
-import { Button } from '../../../components/ui/button'
-import { Card, CardContent } from '../../../components/ui/card'
-import { Input } from '../../../components/ui/input'
-import { Label } from '../../../components/ui/label'
-import { ScrollArea } from '../../../components/ui/scroll-area'
-import { Avatar, AvatarFallback } from '../../../components/ui/avatar'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '../../../components/ui/sheet'
-import { 
-  Menu, 
-  Search, 
-  Settings, 
-  LogOut, 
-  MessageCircle, 
-  Send, 
-  User,
-  Loader2,
-  ArrowLeft,
-  Users
-} from 'lucide-react'
+// Material UI imports
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  IconButton,
+  Box,
+  Paper,
+  Container,
+  TextField,
+  Fab,
+  Avatar,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  ListItemAvatar,
+  Divider,
+  Chip,
+  Card,
+  CardContent,
+  Button,
+  CircularProgress,
+  useTheme,
+  alpha,
+  Slide,
+  Zoom,
+} from '@mui/material'
 
-export default function Chat({ user, conversation, conversationPartner, onBack, onLogout }) {
+import {
+  ArrowBack as ArrowBackIcon,
+  Menu as MenuIcon,
+  Send as SendIcon,
+  Settings as SettingsIcon,
+  Logout as LogoutIcon,
+  Person as PersonIcon,
+  Groups as GroupsIcon,
+  MoreVert as MoreVertIcon,
+} from '@mui/icons-material'
+
+export default function Chat({ user, conversation, conversationPartner, onBack, onLogout, isDarkMode, onThemeToggle }) {
+  // Material UI theme
+  const theme = useTheme()
+  
   // State management for chat functionality
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [userProfile, setUserProfile] = useState(null)
-  // Menu state for user dropdown
-  const [showUserMenu, setShowUserMenu] = useState(false)
+  // Menu state for drawer
+  const [drawerOpen, setDrawerOpen] = useState(false)
   // Push notification state
   const [_pushSupported, setPushSupported] = useState(false)
   const [_notificationPermission, setNotificationPermission] = useState('default')
   // Typing indicators state
   const [typingUsers, setTypingUsers] = useState([])
   
-  // Ref for scrolling to bottom of messages
+  // Refs
   const messagesEndRef = useRef(null)
+  const messagesContainerRef = useRef(null)
   
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showUserMenu && !event.target.closest('.user-menu-container')) {
-        setShowUserMenu(false)
-      }
-    }
-    
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showUserMenu])
+  // Handle drawer close on outside click
+  const handleDrawerToggle = () => {
+    setDrawerOpen(!drawerOpen)
+  }
+
+  const handleDrawerClose = () => {
+    setDrawerOpen(false)
+  }
   
 
   // Fetch user profile from database
@@ -315,7 +335,7 @@ export default function Chat({ user, conversation, conversationPartner, onBack, 
       
       // Send push notification to other users (don't wait for it)
       if (sentMessage?.id) {
-        sendMessageNotification(sentMessage.id, user.id).catch(error => {
+        sendMessageNotification(sentMessage.id, user.id, conversation.id).catch(error => {
           console.warn('Push notification failed:', error)
         })
       }
@@ -335,12 +355,12 @@ export default function Chat({ user, conversation, conversationPartner, onBack, 
   
   // Navigation handlers
   const handleSettingsClick = () => {
-    setShowUserMenu(false)
+    setDrawerOpen(false)
     setShowSettings(true)
   }
   
   const handleLogoutClick = async () => {
-    setShowUserMenu(false)
+    setDrawerOpen(false)
     try {
       await authService.signOut()
       onLogout()
@@ -384,248 +404,629 @@ export default function Chat({ user, conversation, conversationPartner, onBack, 
         userProfile={userProfile}
         onBack={handleBackToChat}
         onProfileUpdate={fetchUserProfile}
+        isDarkMode={isDarkMode}
+        onThemeToggle={onThemeToggle}
       />
     )
   }
 
+  // Drawer content
+  const drawerContent = (
+    <Box sx={{ width: 300, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Drawer header */}
+      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Typography variant="titleMedium" sx={{ mb: 1 }}>
+          Menu
+        </Typography>
+        <Typography variant="bodySmall" color="text.secondary">
+          Navigation and account options
+        </Typography>
+      </Box>
+      
+      {/* User profile section */}
+      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Avatar sx={{ bgcolor: 'primary.main', color: 'primary.contrastText' }}>
+            {(userProfile?.username || user.email)[0].toUpperCase()}
+          </Avatar>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="bodyLarge" sx={{ fontWeight: 500 }} noWrap>
+              {userProfile?.username || user.email.split('@')[0]}
+            </Typography>
+            <Typography variant="bodySmall" color="text.secondary" noWrap>
+              {user.email}
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+      
+      {/* Menu items */}
+      <List sx={{ flex: 1, pt: 1 }}>
+        <ListItem 
+          button 
+          onClick={handleSettingsClick}
+          sx={{ 
+            borderRadius: 1,
+            mx: 1,
+            '&:hover': {
+              bgcolor: 'action.hover'
+            }
+          }}
+        >
+          <ListItemIcon>
+            <SettingsIcon />
+          </ListItemIcon>
+          <ListItemText primary="Settings" />
+        </ListItem>
+        
+        <ListItem 
+          button 
+          onClick={handleLogoutClick}
+          sx={{ 
+            borderRadius: 1,
+            mx: 1,
+            color: 'error.main',
+            '&:hover': {
+              bgcolor: alpha(theme.palette.error.main, 0.1)
+            }
+          }}
+        >
+          <ListItemIcon sx={{ color: 'error.main' }}>
+            <LogoutIcon />
+          </ListItemIcon>
+          <ListItemText primary="Logout" />
+        </ListItem>
+      </List>
+    </Box>
+  )
+
   return (
-    <div className="flex flex-col h-screen">
-      {/* Fixed Navigation Bar */}
-      <Card className="rounded-none border-b bg-red-900 text-white fixed top-0 left-0 right-0 z-50 p-1">
-        <CardContent className="flex items-center justify-between px-4 py-0">
-          {/* Back button and conversation info */}
-          <div className="flex items-center space-x-3 flex-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="text-white hover:bg-white/20"
-              onClick={onBack}
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: 'background.default' }}>
+      {/* App Bar */}
+      <AppBar position="static" elevation={2}>
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
+          {/* Back button */}
+          <IconButton
+            edge="start"
+            onClick={onBack}
+            sx={{ 
+              mr: 1,
+              color: 'inherit',
+              '&:hover': {
+                bgcolor: alpha(theme.palette.primary.contrastText, 0.1)
+              }
+            }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          
+          {/* Conversation avatar */}
+          <Avatar 
+            sx={{ 
+              mr: 2, 
+              width: 40, 
+              height: 40,
+              bgcolor: alpha(theme.palette.primary.contrastText, 0.2),
+              color: 'primary.contrastText'
+            }}
+          >
+            {conversation?.type === 'group' ? (
+              <GroupsIcon />
+            ) : (
+              (conversationPartner?.username?.[0] || conversationPartner?.email?.[0] || '?').toUpperCase()
+            )}
+          </Avatar>
+          
+          {/* Conversation info */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography 
+              variant="titleMedium" 
+              color="inherit" 
+              noWrap
+              sx={{ fontWeight: 500 }}
             >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            
-            <Avatar className="w-8 h-8">
-              <AvatarFallback className="bg-white/20 text-white text-sm">
-                {conversation?.type === 'group' ? (
-                  <Users className="h-4 w-4" />
-                ) : (
-                  (conversationPartner?.username?.[0] || conversationPartner?.email?.[0] || '?').toUpperCase()
-                )}
-              </AvatarFallback>
-            </Avatar>
-            
-            <div className="flex-1 min-w-0">
-              <h2 className="text-sm font-medium truncate">
-                {getConversationName()}
-              </h2>
-              <p className="text-xs text-white/70 truncate">
-                {getConversationSubtitle()}
-              </p>
-            </div>
-          </div>
-
+              {getConversationName()}
+            </Typography>
+            <Typography 
+              variant="bodySmall" 
+              color="inherit" 
+              noWrap
+              sx={{ opacity: 0.7, lineHeight: 1.2 }}
+            >
+              {getConversationSubtitle()}
+            </Typography>
+          </Box>
+          
           {/* Menu button */}
-          <Sheet open={showUserMenu} onOpenChange={setShowUserMenu}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/20">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-80 bg-white dark:bg-gray-900">
-              <SheetHeader>
-                <SheetTitle>Menu</SheetTitle>
-                <SheetDescription>
-                  Navigation and account options
-                </SheetDescription>
-              </SheetHeader>
-              <div className="mt-6 space-y-4">
-                {/* User info */}
-                <div className="flex items-center space-x-3">
-                  <Avatar>
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {(userProfile?.username || user.email)[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{userProfile?.username || user.email.split('@')[0]}</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                  </div>
-                </div>
-                
-                {/* Menu items */}
-                <div className="space-y-2">
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    className="w-full flex items-center justify-start p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors cursor-pointer"
-                    onPointerDown={(e) => {
-                      e.preventDefault();
-                      handleSettingsClick();
-                    }}
-                  >
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </div>
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    className="w-full flex items-center justify-start p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 rounded-md transition-colors cursor-pointer"
-                    onPointerDown={(e) => {
-                      e.preventDefault();
-                      handleLogoutClick();
-                    }}
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Logout</span>
-                  </div>
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet>
-        </CardContent>
-      </Card>
+          <IconButton
+            onClick={handleDrawerToggle}
+            sx={{ 
+              color: 'inherit',
+              '&:hover': {
+                bgcolor: alpha(theme.palette.primary.contrastText, 0.1)
+              }
+            }}
+          >
+            <MenuIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
+      
+      {/* Navigation Drawer */}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={handleDrawerClose}
+        ModalProps={{
+          keepMounted: true, // Better performance on mobile
+        }}
+        PaperProps={{
+          sx: {
+            bgcolor: 'background.paper',
+            backgroundImage: 'none'
+          }
+        }}
+      >
+        {drawerContent}
+      </Drawer>
 
-      {/* Main Chat Content - with top padding to account for fixed header */}
-      <div className="flex flex-col h-full pt-16">
-        {/* Chat Messages Area - with padding for fixed header and input */}
-        <ScrollArea className="flex-1 px-4 py-10 pb-28">
-          <div className="space-y-4">
-            {messages.map((message) => {
-              const isOwnMessage = message.user_id === user.id
-              return (
-                <div
-                  key={message.id}
-                  className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+      {/* Messages Container */}
+      <Box 
+        ref={messagesContainerRef}
+        sx={{ 
+          flex: 1, 
+          overflow: 'auto',
+          px: { xs: 1, sm: 2 },
+          py: 2,
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <Box sx={{ '& > *': { mb: 1 } }}>
+          {messages.map((message) => {
+            const isOwnMessage = message.user_id === user.id
+            return (
+              <Slide
+                key={message.id}
+                direction="up"
+                in={true}
+                timeout={300}
+                unmountOnExit
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: isOwnMessage ? 'flex-end' : 'flex-start',
+                    mb: 1
+                  }}
                 >
-                  <div className={`max-w-[75%] ${isOwnMessage ? 'order-2' : 'order-1'}`}>
-                    <Card className={`p-3 border-none ${isOwnMessage ? 'bg-message-outgoing text-message-outgoing-foreground' : 'bg-gray-900 text-white'}`}>
-                      {/* Username for other users */}
-                      {!isOwnMessage && (
-                        <p className="text-xs font-semibold mb-1 text-primary">
-                          {message.username || 'Unknown User'}
-                        </p>
-                      )}
-                      
-                      {/* Message content - text or image */}
-                      {message.message_type === 'image' && message.image_url ? (
-                        <div className="space-y-2">
-                          <img 
-                            src={message.image_url} 
-                            alt="Shared image"
-                            className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                            style={{ maxHeight: '300px' }}
-                            onClick={() => window.open(message.image_url, '_blank')}
-                          />
-                          {message.content && message.content !== 'Image' && (
-                            <p className="text-sm break-words">
-                              {message.content}
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-sm break-words">
-                          {message.content}
-                        </p>
-                      )}
-                      
-                      {/* Timestamp */}
-                      <p className="text-xs opacity-70 mt-1">
-                        {formatTime(message.created_at)}
-                      </p>
-                    </Card>
-                  </div>
-                </div>
-              )
-            })}
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
+                  <Paper
+                    elevation={1}
+                    sx={{
+                      maxWidth: '75%',
+                      p: 1.5,
+                      bgcolor: isOwnMessage 
+                        ? theme.custom?.chat?.outgoingContainer || 'primary.light'
+                        : theme.custom?.chat?.incomingContainer || 'surface.container.main',
+                      color: isOwnMessage 
+                        ? '#FFFFFF'  // Always white text for outgoing messages
+                        : theme.palette.mode === 'dark' ? '#FFFFFF' : theme.palette.text.primary,
+                      borderRadius: isOwnMessage 
+                        ? '16px 16px 4px 16px' 
+                        : '16px 16px 16px 4px',
+                      backgroundImage: 'none',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      justifyContent: 'flex-start'
+                    }}
+                  >
+                    {/* Username - only show for incoming messages */}
+                    {!isOwnMessage && (
+                      <Typography 
+                        variant="labelSmall" 
+                        sx={{ 
+                          fontWeight: 600, 
+                          mb: 0.5,
+                          color: theme.palette.mode === 'dark' ? '#90CAF9' : 'primary.main',
+                          opacity: 1
+                        }}
+                      >
+                        {message.username || 'Unknown User'}
+                      </Typography>
+                    )}
+                    
+                    {/* Message content - text or image */}
+                    {message.message_type === 'image' && message.image_url ? (
+                      <Box>
+                        <Box
+                          component="img"
+                          src={message.image_url}
+                          alt="Shared image"
+                          onClick={() => window.open(message.image_url, '_blank')}
+                          sx={{
+                            maxWidth: '100%',
+                            maxHeight: '300px',
+                            borderRadius: 2,
+                            cursor: 'pointer',
+                            transition: 'opacity 0.2s',
+                            '&:hover': {
+                              opacity: 0.9
+                            }
+                          }}
+                        />
+                        {message.content && message.content !== 'Image' && (
+                          <Typography 
+                            variant="bodyMedium" 
+                            sx={{ 
+                              mt: 1,
+                              wordBreak: 'break-word',
+                              whiteSpace: 'pre-wrap'
+                            }}
+                          >
+                            {message.content}
+                          </Typography>
+                        )}
+                      </Box>
+                    ) : (
+                      <Typography 
+                        variant="bodyMedium" 
+                        sx={{ 
+                          wordBreak: 'break-word',
+                          whiteSpace: 'pre-wrap',
+                          mb: 0.5
+                        }}
+                      >
+                        {message.content}
+                      </Typography>
+                    )}
+                    
+                    {/* Timestamp */}
+                    <Typography 
+                      variant="labelSmall" 
+                      sx={{ 
+                        mt: 0.5,
+                        opacity: theme.palette.mode === 'dark' ? 0.5 : 0.4,
+                        fontSize: '0.75rem',
+                        textAlign: 'left'
+                      }}
+                    >
+                      {formatTime(message.created_at)}
+                    </Typography>
+                  </Paper>
+                </Box>
+              </Slide>
+            )
+          })}
+          <div ref={messagesEndRef} />
+        </Box>
+      </Box>
 
-        {/* Typing Indicators - Subtle dots animation */}
-        {(typingUsers.length > 0 || import.meta.env.DEV) && (
-          <div className="fixed bottom-20 left-4 right-4 z-50 pointer-events-none">
-            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full px-4 py-2 shadow-sm border border-gray-200 dark:border-gray-700 w-fit">
-              <div className="flex items-center space-x-2">
-                {typingUsers.length > 0 ? (
-                  <>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      {typingUsers.length === 1 
-                        ? typingUsers[0].username || 'Someone'
-                        : typingUsers.length === 2
-                        ? `${typingUsers[0].username || 'Someone'} and ${typingUsers[1].username || 'someone'}`
-                        : `${typingUsers[0].username || 'Someone'} and ${typingUsers.length - 1} others`
-                      }
-                    </span>
-                    <div className="flex space-x-1">
-                      <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                      <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                      <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                    </div>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        )}
+      {/* Typing Indicators */}
+      {typingUsers.length > 0 && (
+        <Zoom in={true}>
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 80,
+              left: 16,
+              right: 16,
+              display: 'flex',
+              justifyContent: 'flex-start',
+              pointerEvents: 'none'
+            }}
+          >
+            <Chip
+              size="small"
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="labelSmall">
+                    {typingUsers.length === 1 
+                      ? `${typingUsers[0].username || 'Someone'} is typing`
+                      : typingUsers.length === 2
+                      ? `${typingUsers[0].username || 'Someone'} and ${typingUsers[1].username || 'someone'} are typing`
+                      : `${typingUsers[0].username || 'Someone'} and ${typingUsers.length - 1} others are typing`
+                    }
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 0.25 }}>
+                    {[0, 1, 2].map((index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: '50%',
+                          bgcolor: 'text.secondary',
+                          animation: 'bounce 1.4s infinite ease-in-out both',
+                          animationDelay: `${index * 0.16}s`,
+                          '@keyframes bounce': {
+                            '0%, 80%, 100%': {
+                              transform: 'scale(0)'
+                            },
+                            '40%': {
+                              transform: 'scale(1)'
+                            }
+                          }
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              }
+              sx={{
+                bgcolor: alpha(theme.palette.background.paper, 0.9),
+                backdropFilter: 'blur(8px)',
+                border: 1,
+                borderColor: 'divider'
+              }}
+            />
+          </Box>
+        </Zoom>
+      )}
 
-        {/* Message Input Area - Fixed to bottom */}
-        <Card className="rounded-none border-t bg-red-900 text-white fixed bottom-0 left-0 right-0 z-40">
-          <CardContent className="p-4 py-1">
-            <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
-              {/* Message input field */}
-              <div className="flex-1 relative">
-                <Input
-                  placeholder="Type a message..."
-                  value={newMessage}
-                  onChange={(e) => {
-                    setNewMessage(e.target.value)
-                    // Typing indicators disabled temporarily
-                    // Will re-enable after fixing database issues
-                  }}
-                  onBlur={() => {
-                    // Stop typing when user leaves input field
-                    // typingService.stopTyping(user.id)
-                  }}
-                  disabled={loading}
-                  className="pr-10 bg-black text-white placeholder:text-gray-400"
-                />
-                {/* <MessageCircle className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" /> */}
-              </div>
-              
-              {/* Image upload button */}
-              <ImageUpload 
+      {/* Message Input Area */}
+      <Paper 
+        elevation={3}
+        square
+        sx={{ 
+          borderTop: 1, 
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+          backgroundImage: 'none'
+        }}
+      >
+        <Box sx={{ p: 2 }}>
+          <Box 
+            component="form" 
+            onSubmit={handleSendMessage}
+            sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}
+          >
+            {/* Message input field */}
+            <TextField
+              fullWidth
+              multiline
+              maxRows={4}
+              placeholder="Type a message..."
+              value={newMessage}
+              onChange={(e) => {
+                setNewMessage(e.target.value)
+                // Typing indicators disabled temporarily
+                // Will re-enable after fixing database issues
+              }}
+              onBlur={() => {
+                // Stop typing when user leaves input field
+                // typingService.stopTyping(user.id)
+              }}
+              disabled={loading}
+              variant="outlined"
+              size="small"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  bgcolor: 'background.default',
+                  '& fieldset': {
+                    borderColor: alpha(theme.palette.text.primary, 0.23)
+                  },
+                  '&:hover fieldset': {
+                    borderColor: alpha(theme.palette.text.primary, 0.4)
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'primary.main',
+                    borderWidth: 2
+                  }
+                }
+              }}
+              slotProps={{
+                input: {
+                  sx: { 
+                    py: 1.5,
+                    pr: 1
+                  }
+                }
+              }}
+            />
+            
+            {/* Image upload component */}
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              <MaterialImageUpload 
                 userId={user.id}
                 conversationId={conversation?.id}
                 onImageSent={() => {
-                  // Scroll to bottom after image sent
                   setTimeout(scrollToBottom, 100)
-                }} 
+                }}
+                loading={loading}
               />
-              
-              {/* Send button */}
-              <Button
-                type="submit"
-                size="icon"
-                disabled={loading || !newMessage.trim()}
-                className="rounded-full"
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+            </Box>
+            
+            {/* Send button */}
+            <Fab
+              size="small"
+              color="primary"
+              type="submit"
+              disabled={loading || !newMessage.trim()}
+              sx={{
+                minWidth: 40,
+                width: 40,
+                height: 40,
+                '&.Mui-disabled': {
+                  bgcolor: 'action.disabledBackground'
+                }
+              }}
+            >
+              {loading ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                <SendIcon />
+              )}
+            </Fab>
+          </Box>
+        </Box>
+      </Paper>
+    </Box>
+  )
+}
+
+// Material UI version of ImageUpload component
+function MaterialImageUpload({ userId, conversationId, onImageSent, loading: parentLoading }) {
+  const [uploading, setUploading] = useState(false)
+  const [hasCamera, setHasCamera] = useState(false)
+  const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
+  const theme = useTheme()
+  
+  // Enable after migration is complete
+  const isEnabled = true
+  
+  // Check if device has camera capabilities
+  useEffect(() => {
+    const checkCamera = async () => {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          const devices = await navigator.mediaDevices.enumerateDevices()
+          const videoDevices = devices.filter(device => device.kind === 'videoinput')
+          setHasCamera(videoDevices.length > 0)
+        } else {
+          setHasCamera(/Mobi|Android/i.test(navigator.userAgent))
+        }
+      } catch (error) {
+        console.log('Camera check failed, assuming camera available on mobile:', error)
+        setHasCamera(/Mobi|Android/i.test(navigator.userAgent))
+      }
+    }
+    
+    checkCamera()
+  }, [])
+  
+  const handleImageSelect = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file || !conversationId) return
+    
+    setUploading(true)
+    
+    try {
+      const { imageService } = await import('../services/imageService')
+      const imageUrl = await imageService.uploadImage(file, userId)
+      await imageService.sendImageMessageToConversation(imageUrl, userId, conversationId)
+      
+      onImageSent?.()
+      
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = ''
+      }
+    } catch (error) {
+      console.error('Image upload failed:', error)
+      alert(error.message || 'Failed to upload image')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleCameraCapture = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file || !conversationId) return
+    
+    setUploading(true)
+    
+    try {
+      const { imageService } = await import('../services/imageService')
+      const imageUrl = await imageService.uploadImage(file, userId)
+      await imageService.sendImageMessageToConversation(imageUrl, userId, conversationId)
+      
+      onImageSent?.()
+      
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = ''
+      }
+    } catch (error) {
+      console.error('Camera capture failed:', error)
+      alert(error.message || 'Failed to capture image')
+    } finally {
+      setUploading(false)
+    }
+  }
+  
+  return (
+    <>
+      {/* Hidden file inputs */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageSelect}
+        style={{ display: 'none' }}
+        disabled={uploading || parentLoading}
+      />
+      
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleCameraCapture}
+        style={{ display: 'none' }}
+        disabled={uploading || parentLoading}
+      />
+      
+      {/* Gallery/file picker button */}
+      <IconButton
+        size="small"
+        onClick={() => isEnabled && fileInputRef.current?.click()}
+        disabled={uploading || !isEnabled || parentLoading}
+        title={isEnabled ? "Choose image from gallery" : "Image upload disabled - run database migration first"}
+        sx={{
+          color: 'primary.main',
+          '&:hover': {
+            bgcolor: alpha(theme.palette.primary.main, 0.1)
+          },
+          '&.Mui-disabled': {
+            color: 'action.disabled'
+          }
+        }}
+      >
+        {uploading ? (
+          <CircularProgress size={20} />
+        ) : (
+          <Box component="span" sx={{ fontSize: 20 }}>📷</Box>
+        )}
+      </IconButton>
+      
+      {/* Camera capture button - only show if camera is available */}
+      {hasCamera && (
+        <IconButton
+          size="small"
+          onClick={() => isEnabled && cameraInputRef.current?.click()}
+          disabled={uploading || !isEnabled || parentLoading}
+          title={isEnabled ? "Take photo with camera" : "Camera disabled - run database migration first"}
+          sx={{
+            color: 'primary.main',
+            '&:hover': {
+              bgcolor: alpha(theme.palette.primary.main, 0.1)
+            },
+            '&.Mui-disabled': {
+              color: 'action.disabled'
+            }
+          }}
+        >
+          {uploading ? (
+            <CircularProgress size={20} />
+          ) : (
+            <Box component="span" sx={{ fontSize: 20 }}>🎥</Box>
+          )}
+        </IconButton>
+      )}
+    </>
   )
 }
 
 // Settings Component - allows users to update their profile and install app
-// Uses a mix of Material UI and LiftKit components
-function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
+function SettingsPage({ user, userProfile, onBack, onProfileUpdate, isDarkMode, onThemeToggle }) {
+  const theme = useTheme()
   // Local state for settings form
   const [newUsername, setNewUsername] = useState(userProfile?.username || '')
   const [loading, setLoading] = useState(false)
@@ -774,90 +1175,146 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* Settings Header */}
-      <Card className="rounded-none border-b bg-primary text-primary-foreground">
-        <CardContent className="flex items-center p-4">
-          {/* Back button */}
-          <Button
-            variant="ghost"
+      <AppBar position="static" elevation={2}>
+        <Toolbar>
+          <IconButton
+            edge="start"
             onClick={onBack}
-            className="text-primary-foreground hover:bg-primary-foreground/20 mr-4"
+            sx={{ 
+              mr: 2,
+              color: 'inherit',
+              '&:hover': {
+                bgcolor: alpha(theme.palette.primary.contrastText, 0.1)
+              }
+            }}
           >
-            ← Back to Chat
-          </Button>
-          <h1 className="text-xl font-semibold flex-1">
+            <ArrowBackIcon />
+          </IconButton>
+          
+          <Typography variant="titleLarge" sx={{ flex: 1, fontWeight: 500 }}>
             Settings
-          </h1>
-        </CardContent>
-      </Card>
+          </Typography>
+          
+          {/* Theme toggle in header */}
+          <IconButton
+            onClick={onThemeToggle}
+            sx={{ 
+              color: 'inherit',
+              '&:hover': {
+                bgcolor: alpha(theme.palette.primary.contrastText, 0.1)
+              }
+            }}
+          >
+            {isDarkMode ? '🌞' : '🌙'}
+          </IconButton>
+        </Toolbar>
+      </AppBar>
 
       {/* Settings Content */}
-      <ScrollArea className="flex-1">
-        <div className="max-w-2xl mx-auto p-6">
-          <Card>
-            <CardContent className="p-6">
+      <Box sx={{ flex: 1, overflow: 'auto' }}>
+        <Container maxWidth="md" sx={{ py: 3 }}>
+          <Card elevation={1}>
+            <CardContent sx={{ p: 3 }}>
               {/* Title */}
-              <h2 className="text-2xl font-semibold mb-6">
+              <Typography variant="headlineSmall" sx={{ mb: 3 }}>
                 Account Settings
-              </h2>
+              </Typography>
           
-              <form onSubmit={handleUpdateUsername} className="space-y-4">
+              <Box component="form" onSubmit={handleUpdateUsername} sx={{ '& > *': { mb: 2 } }}>
                 {/* Error/Success Messages */}
                 {error && (
-                  <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md border border-destructive/20 flex items-center">
-                    <span className="mr-2">❌</span>
-                    {error}
-                  </div>
+                  <Paper 
+                    elevation={0}
+                    sx={{ 
+                      bgcolor: alpha(theme.palette.error.main, 0.1), 
+                      color: 'error.main', 
+                      p: 2, 
+                      border: 1,
+                      borderColor: alpha(theme.palette.error.main, 0.3),
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <Typography variant="bodySmall" sx={{ display: 'flex', alignItems: 'center' }}>
+                      <span style={{ marginRight: 8 }}>❌</span>
+                      {error}
+                    </Typography>
+                  </Paper>
                 )}
                 
                 {success && (
-                  <div className="bg-green-500/15 text-green-700 text-sm p-3 rounded-md border border-green-500/20 flex items-center">
-                    <span className="mr-2">✅</span>
-                    {success}
-                  </div>
+                  <Paper 
+                    elevation={0}
+                    sx={{ 
+                      bgcolor: alpha('#4caf50', 0.1), 
+                      color: '#2e7d32', 
+                      p: 2, 
+                      border: 1,
+                      borderColor: alpha('#4caf50', 0.3),
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <Typography variant="bodySmall" sx={{ display: 'flex', alignItems: 'center' }}>
+                      <span style={{ marginRight: 8 }}>✅</span>
+                      {success}
+                    </Typography>
+                  </Paper>
                 )}
 
                 {/* Username Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="username"
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      disabled={loading}
-                      className="pl-10"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Choose a unique username for your profile</p>
-                </div>
+                <Box>
+                  <Typography variant="labelLarge" component="label" htmlFor="username" sx={{ mb: 1, display: 'block' }}>
+                    Username
+                  </Typography>
+                  <TextField
+                    id="username"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    disabled={loading}
+                    fullWidth
+                    variant="outlined"
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <PersonIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                        ),
+                      },
+                    }}
+                  />
+                  <Typography variant="bodySmall" color="text.secondary" sx={{ mt: 0.5 }}>
+                    Choose a unique username for your profile
+                  </Typography>
+                </Box>
 
                 {/* Update Button */}
                 <Button
                   type="submit"
                   disabled={loading || !newUsername.trim() || newUsername === userProfile?.username}
-                  className="w-full"
+                  variant="contained"
+                  fullWidth
+                  sx={{ mt: 2 }}
                 >
                   {loading ? 'Updating...' : success ? '✅ Updated!' : 'Update Username'}
                 </Button>
-              </form>
+              </Box>
 
               {/* Divider */}
-              <div className="h-px bg-border my-6" />
+              <Divider sx={{ my: 3 }} />
 
               {/* Push Notifications Section */}
-              <h3 className="text-lg font-semibold mb-4">
+              <Typography variant="titleMedium" sx={{ mb: 2 }}>
                 Push Notifications
-              </h3>
-              <Card className="p-4 mb-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium mb-1">
+              </Typography>
+              <Card sx={{ p: 2, mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="bodyLarge" sx={{ fontWeight: 500, mb: 0.5 }}>
                       New Message Notifications
-                    </p>
-                    <p className="text-sm text-muted-foreground mb-2">
+                    </Typography>
+                    <Typography variant="bodyMedium" color="text.secondary" sx={{ mb: 1 }}>
                       {!pushSupported 
                         ? "Push notifications are not supported on this device"
                         : notificationPermission === 'granted'
@@ -866,14 +1323,15 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
                             ? "Notifications are blocked. Enable them in your browser settings"
                             : "Enable notifications to get alerts for new messages"
                       }
-                    </p>
-                  </div>
+                    </Typography>
+                  </Box>
                   {pushSupported && notificationPermission !== 'denied' && (
                     <Button
                       onClick={handleToggleNotifications}
                       disabled={notificationLoading}
-                      variant={notificationPermission === 'granted' ? 'destructive' : 'default'}
-                      className="ml-4"
+                      variant={notificationPermission === 'granted' ? 'outlined' : 'contained'}
+                      color={notificationPermission === 'granted' ? 'error' : 'primary'}
+                      sx={{ ml: 2 }}
                     >
                       {notificationLoading 
                         ? 'Loading...' 
@@ -883,23 +1341,23 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
                       }
                     </Button>
                   )}
-                </div>
+                </Box>
               </Card>
 
               {/* Divider */}
-              <div className="h-px bg-border my-6" />
+              <Divider sx={{ my: 3 }} />
 
               {/* Install App Section */}
-              <h3 className="text-lg font-semibold mb-4">
+              <Typography variant="titleMedium" sx={{ mb: 2 }}>
                 Progressive Web App
-              </h3>
-              <Card className="p-4 mb-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium mb-1">
+              </Typography>
+              <Card sx={{ p: 2, mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="bodyLarge" sx={{ fontWeight: 500, mb: 0.5 }}>
                       Install as App
-                    </p>
-                    <p className="text-sm text-muted-foreground mb-2">
+                    </Typography>
+                    <Typography variant="bodyMedium" color="text.secondary" sx={{ mb: 1 }}>
                       {isInstallable 
                         ? /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent)
                           ? "Install ClaudeChat as an app on your iOS device using Safari's Share menu"
@@ -908,46 +1366,47 @@ function SettingsPage({ user, userProfile, onBack, onProfileUpdate }) {
                           ? "App is already installed"
                           : "Install option will appear when available."
                       }
-                    </p>
-                  </div>
+                    </Typography>
+                  </Box>
                   {isInstallable && (
                     <Button
                       onClick={handleInstallApp}
-                      className="ml-4"
+                      variant="contained"
+                      sx={{ ml: 2 }}
                     >
                       Install App
                     </Button>
                   )}
-                </div>
+                </Box>
               </Card>
 
               {/* Divider */}
-              <div className="h-px bg-border my-6" />
+              <Divider sx={{ my: 3 }} />
 
               {/* Account Information */}
-              <h3 className="text-lg font-semibold mb-4">
+              <Typography variant="titleMedium" sx={{ mb: 2 }}>
                 Account Information
-              </h3>
-              <div className="space-y-4">
-                <Card className="p-4">
-                  <p className="font-medium mb-1">Email</p>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
+              </Typography>
+              <Box sx={{ '& > *': { mb: 2 } }}>
+                <Card sx={{ p: 2 }}>
+                  <Typography variant="bodyLarge" sx={{ fontWeight: 500, mb: 0.5 }}>Email</Typography>
+                  <Typography variant="bodyMedium" color="text.secondary">{user.email}</Typography>
                 </Card>
-                <Card className="p-4">
-                  <p className="font-medium mb-1">User ID</p>
-                  <p className="text-sm text-muted-foreground font-mono">{user.id}</p>
+                <Card sx={{ p: 2 }}>
+                  <Typography variant="bodyLarge" sx={{ fontWeight: 500, mb: 0.5 }}>User ID</Typography>
+                  <Typography variant="bodyMedium" color="text.secondary" sx={{ fontFamily: 'monospace' }}>{user.id}</Typography>
                 </Card>
                 {userProfile && (
-                  <Card className="p-4">
-                    <p className="font-medium mb-1">Current Username</p>
-                    <p className="text-sm text-muted-foreground">{userProfile.username}</p>
+                  <Card sx={{ p: 2 }}>
+                    <Typography variant="bodyLarge" sx={{ fontWeight: 500, mb: 0.5 }}>Current Username</Typography>
+                    <Typography variant="bodyMedium" color="text.secondary">{userProfile.username}</Typography>
                   </Card>
                 )}
-              </div>
+              </Box>
             </CardContent>
           </Card>
-        </div>
-      </ScrollArea>
-    </div>
+        </Container>
+      </Box>
+    </Box>
   )
 }

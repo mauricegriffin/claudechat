@@ -163,27 +163,47 @@ export const authService = {
     }
   },
 
-  async updateUserProfile(userId, username) {
+  async updateUserProfile(userId, username, email = null) {
     try {
+      // Get current user if email not provided
+      if (!email) {
+        const { data: { user } } = await supabase.auth.getUser()
+        email = user?.email
+      }
+
       // First try to update existing profile
+      const updateFields = {
+        username: username.trim(),
+        updated_at: new Date().toISOString()
+      }
+      
+      // Add email if provided
+      if (email) {
+        updateFields.email = email
+      }
+
       const { data: updateData, error: updateError } = await supabase
         .from('user_profiles')
-        .update({
-          username: username.trim(),
-          updated_at: new Date().toISOString()
-        })
+        .update(updateFields)
         .eq('user_id', userId)
         .select()
 
       // If update failed because no row exists, insert new profile
       if (updateError || !updateData || updateData.length === 0) {
+        const insertFields = {
+          user_id: userId,
+          username: username.trim(),
+          updated_at: new Date().toISOString()
+        }
+        
+        // Add email if available
+        if (email) {
+          insertFields.email = email
+        }
+
         const { data: insertData, error: insertError } = await supabase
           .from('user_profiles')
-          .insert({
-            user_id: userId,
-            username: username.trim(),
-            updated_at: new Date().toISOString()
-          })
+          .insert(insertFields)
           .select()
         
         if (insertError) throw insertError
@@ -216,5 +236,30 @@ export const authService = {
 
   onAuthStateChange(callback) {
     return supabase.auth.onAuthStateChange(callback)
+  },
+
+  // Ensure user profile exists with email (call this after login)
+  async ensureUserProfileWithEmail(userId) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user?.email) return
+
+      // Check if profile exists
+      const { data: existingProfile } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+
+      if (!existingProfile) {
+        // Create profile with email and default username
+        await this.updateUserProfile(userId, user.email.split('@')[0], user.email)
+      } else if (!existingProfile.email) {
+        // Update existing profile to add email
+        await this.updateUserProfile(userId, existingProfile.username, user.email)
+      }
+    } catch (error) {
+      console.warn('Could not ensure user profile with email:', error)
+    }
   }
 }

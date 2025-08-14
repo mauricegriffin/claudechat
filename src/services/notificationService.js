@@ -4,16 +4,17 @@ import { supabase } from '../supabaseClient'
  * Send push notification for a new message
  * This calls the Supabase Edge Function to handle the notification sending
  */
-export const sendMessageNotification = async (messageId, senderId) => {
+export const sendMessageNotification = async (messageId, senderId, conversationId = null) => {
   try {
-    console.log('Calling push notification Edge Function with:', { messageId, senderId })
+    console.log('Calling push notification Edge Function with:', { messageId, senderId, conversationId })
     
     // Test with early return first
     if (messageId === 'test-early-return') {
       const { data, error } = await supabase.functions.invoke('send-push-notification', {
         body: {
           messageId: 'test-early-return',
-          senderId
+          senderId,
+          conversationId
         }
       })
       console.log('Early return test result:', { data, error })
@@ -23,7 +24,8 @@ export const sendMessageNotification = async (messageId, senderId) => {
     const { data, error } = await supabase.functions.invoke('send-push-notification', {
       body: {
         messageId,
-        senderId
+        senderId,
+        conversationId
       }
     })
 

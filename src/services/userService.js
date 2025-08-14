@@ -30,7 +30,7 @@ export const userService = {
       // Map to consistent format
       const allUsers = (data || []).map(profile => ({
         id: profile.user_id,
-        email: profile.username + '@example.com', // Placeholder since we don't have auth data
+        email: profile.email || profile.username + '@example.com', // Use real email if available
         username: profile.username,
         created_at: profile.created_at,
         user_id: profile.user_id
@@ -61,7 +61,7 @@ export const userService = {
         
         const fallbackUsers = profileData?.map(profile => ({
           id: profile.user_id,
-          email: 'email@example.com', // Placeholder since we can't get auth data
+          email: profile.email || 'email@example.com', // Use real email if available
           username: profile.username,
           created_at: profile.created_at,
           user_id: profile.user_id

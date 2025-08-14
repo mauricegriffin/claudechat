@@ -198,6 +198,7 @@ export default function UserList({ user, onConversationSelect, onLogout, onSetti
             unreadCount={unreadCounts[everyoneConversation.id] || 0}
             onClick={() => onConversationSelect(everyoneConversation, null)}
             isGroup={true}
+            allUsers={allUsers}
           />
         )}
 
@@ -212,6 +213,7 @@ export default function UserList({ user, onConversationSelect, onLogout, onSetti
               onConversationSelect(conversation, otherUser)
             }}
             isGroup={false}
+            allUsers={allUsers}
           />
         ))}
 
@@ -252,7 +254,7 @@ export default function UserList({ user, onConversationSelect, onLogout, onSetti
 }
 
 // Conversation Item Component (WhatsApp style)
-function ConversationItem({ conversation, unreadCount, onClick, isGroup }) {
+function ConversationItem({ conversation, unreadCount, onClick, isGroup, allUsers }) {
   const lastMessage = conversation.messages?.[0]
   
   const formatTime = (timestamp) => {
@@ -274,6 +276,18 @@ function ConversationItem({ conversation, unreadCount, onClick, isGroup }) {
   const getDisplayName = () => {
     if (isGroup) return 'Everyone'
     return conversation.participant_name || conversation.name || 'Direct Message'
+  }
+
+  const getParticipantEmail = () => {
+    if (isGroup) return null
+    // Find the participant in allUsers to get their email
+    const participant = allUsers.find(u => u.id === conversation.participant_id)
+    const email = participant?.email
+    // Don't show placeholder emails
+    if (email && !email.includes('@example.com')) {
+      return email
+    }
+    return null
   }
 
   const getLastMessagePreview = () => {
@@ -303,9 +317,16 @@ function ConversationItem({ conversation, unreadCount, onClick, isGroup }) {
       
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
-          <h3 className="font-medium text-sm truncate text-white group-hover:text-gray-100">
-            {getDisplayName()}
-          </h3>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-sm truncate text-white group-hover:text-gray-100">
+              {getDisplayName()}
+              {!isGroup && getParticipantEmail() && (
+                <span className="text-xs text-gray-500 font-normal ml-2">
+                  {getParticipantEmail()}
+                </span>
+              )}
+            </h3>
+          </div>
           {lastMessage && (
             <span className="text-xs text-gray-400 group-hover:text-gray-300 ml-2 flex-shrink-0">
               {formatTime(lastMessage.created_at)}
@@ -349,9 +370,14 @@ function UserItem({ user, isOnline, onClick }) {
         )}
       </div>
       
-      <div className="flex-1">
-        <h3 className="font-medium text-sm text-white group-hover:text-gray-100">
+      <div className="flex-1 min-w-0">
+        <h3 className="font-medium text-sm text-white group-hover:text-gray-100 truncate">
           {displayName}
+          {user.email && !user.email.includes('@example.com') && (
+            <span className="text-xs text-gray-500 font-normal ml-2">
+              {user.email}
+            </span>
+          )}
         </h3>
         <p className="text-sm text-gray-400 group-hover:text-gray-300">
           {isOnline ? 'Online' : 'Tap to message'}
